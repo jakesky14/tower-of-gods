@@ -2810,10 +2810,10 @@ function buildHeroStatusDOM() {
 
 function initBattle() {
   STATE.heroes = deepClone(HERO_TEMPLATES);
-  STATE.enemies = [spawnBoss(1)];
+  STATE.floor = 1;
+  STATE.enemies = [spawnBoss(STATE.floor)];
   STATE.log = [];
   STATE.round = 1;
-  STATE.floor = 1;
   STATE.heroLevel = 1;
   STATE.quickCast = false;
   STATE.blockMultiplier = 1.0;
