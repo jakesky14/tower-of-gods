@@ -2478,8 +2478,6 @@ function endBattle(result) {
     choices.classList.add("hidden");
     restart.classList.remove("hidden");
   } else if (result === "win") {
-    STATE.skillStars++;
-    document.getElementById("skill-stars-val").textContent = STATE.skillStars;
     title.textContent = `✨ Floor ${STATE.floor} Cleared! ✨`;
     sub.textContent = "Choose your upgrade:";
     overlay.style.background = "rgba(5,20,5,0.88)";
