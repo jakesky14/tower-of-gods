@@ -1643,10 +1643,10 @@ const SKILL_TREE = [
     desc:"Deep Freeze shatters the ice for 125% bonus magic damage" },
 
   // ── Short Circuit (Drenched → Lightning) ──
-  { key:"chain_lightning", name:"Chain Lightning",    combo:"short_circuit", row:"effect", tier:1, cost:2,
-    desc:"Short Circuit fires a second hit for 50% bonus damage" },
-  { key:"arc_flash",       name:"Arc Flash",           combo:"short_circuit", row:"effect", tier:2, cost:3,
-    desc:"Short Circuit fires a third hit for 25% bonus damage" },
+  { key:"static_shock",    name:"Static Shock",        combo:"short_circuit", row:"effect", tier:1, cost:2,
+    desc:"Short Circuit also electrocutes the target for 2 turns" },
+  { key:"superconductor",  name:"Superconductor",      combo:"short_circuit", row:"effect", tier:2, cost:3,
+    desc:"Short Circuit electrocutes the target for 3 turns instead of 2" },
   { key:"overcharge",      name:"Overcharge",          combo:"short_circuit", row:"damage", tier:1, cost:3,
     desc:"Short Circuit deals 225% bonus damage instead of 150%" },
   { key:"megavolt",        name:"Megavolt",            combo:"short_circuit", row:"damage", tier:2, cost:4,
@@ -2057,21 +2057,11 @@ function resolveAction(actor, action, timingMultiplier = 1.0) {
             if (target.hp === 0) target.alive = false;
             addLog(`⚡ Short circuit! The water conducts the lightning — ${target.name} takes ${bonusDmg} bonus damage!`, "magic");
             animateHit(target.id);
-            // Chain Lightning: second hit at 50%
-            if (STATE.skills.chain_lightning && target.alive) {
-              const chainDmg = comboDmg(actor, 0.5);
-              target.hp = Math.max(0, target.hp - chainDmg);
-              if (target.hp === 0) target.alive = false;
-              addLog(`⚡ Chain Lightning arcs back for ${chainDmg} more damage!`, "magic");
-              animateHit(target.id);
-            }
-            // Arc Flash: third hit at 25%
-            if (STATE.skills.arc_flash && target.alive) {
-              const arcDmg = comboDmg(actor, 0.25);
-              target.hp = Math.max(0, target.hp - arcDmg);
-              if (target.hp === 0) target.alive = false;
-              addLog(`⚡ Arc Flash discharges for ${arcDmg} more damage!`, "magic");
-              animateHit(target.id);
+            // Static Shock / Superconductor: electrocute target
+            if ((STATE.skills.static_shock || STATE.skills.superconductor) && target.alive) {
+              const eDur = lingerDur(STATE.skills.superconductor ? 3 : 2);
+              tse.electrocuted = Math.max(tse.electrocuted || 0, eDur);
+              addLog(`⚡ The current keeps flowing! ${target.name} is electrocuted for ${eDur} turns!`, "status");
             }
           }
         }
