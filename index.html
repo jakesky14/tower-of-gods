@@ -1395,32 +1395,24 @@
   <button id="combo-ref-close">✕ Close</button>
   <div id="combo-ref-title">⚗ Magic Combo Effects</div>
   <div class="combo-row">
-    <span class="combo-trigger">☀️ Sun + ❄️ Frozen</span>
+    <span class="combo-trigger">❄️ Frozen → ☀️ Sun</span>
     <span class="combo-effect"><strong>Melt</strong> — strips freeze, deals +75% bonus fire damage</span>
   </div>
   <div class="combo-row">
-    <span class="combo-trigger">🌪️ Wind + 🔥 Burning</span>
+    <span class="combo-trigger">🔥 Burning → 🌪️ Wind</span>
     <span class="combo-effect"><strong>Fan the Flames</strong> — deals 50% bonus fire damage, extends burn by 2 turns</span>
   </div>
   <div class="combo-row">
-    <span class="combo-trigger">🌧️ Rain → enemy</span>
-    <span class="combo-effect"><strong>Drench</strong> — applies 💧 Drenched (2 turns); sets up combos below</span>
+    <span class="combo-trigger">❄️ Frozen → 🌪️ Wind</span>
+    <span class="combo-effect"><strong>Blizzard</strong> — strips freeze, deals +100% bonus damage, refreezes for 1 turn</span>
   </div>
   <div class="combo-row">
-    <span class="combo-trigger">🌧️ Rain (you burning)</span>
-    <span class="combo-effect"><strong>Douse</strong> — removes 🔥 Burning from yourself</span>
-  </div>
-  <div class="combo-row">
-    <span class="combo-trigger">❄️ Snow + 💧 Drenched</span>
+    <span class="combo-trigger">💧 Drenched → ❄️ Snow</span>
     <span class="combo-effect"><strong>Deep Freeze</strong> — strips drench, freezes for 2 turns instead of 1</span>
   </div>
   <div class="combo-row">
-    <span class="combo-trigger">⚡ Lightning + 💧 Drenched</span>
+    <span class="combo-trigger">💧 Drenched → ⚡ Lightning</span>
     <span class="combo-effect"><strong>Short Circuit</strong> — strips drench, deals +150% bonus damage</span>
-  </div>
-  <div class="combo-row">
-    <span class="combo-trigger">🌪️ Wind + ❄️ Frozen</span>
-    <span class="combo-effect"><strong>Blizzard</strong> — strips freeze, deals +100% bonus damage, refreezes for 1 turn</span>
   </div>
 </div>
 
@@ -1610,35 +1602,55 @@ const CYCLE_PREFIXES = ["Crazed", "Distorted", "Dark", "Corrupt", "Hellish"];
 
 // ─── SKILL TREE ───────────────────────────────────────────────────────────────
 const SKILL_TREE = [
-  // ── Melt (Sun + Frozen) ──
-  { key: "solar_flare",     name: "Solar Flare",     combo: "melt",          tier: 1, requires: null, cost: 3,
-    desc: "Melt deals 125% bonus damage instead of 75%" },
-  { key: "scorching_light", name: "Scorching Light", combo: "melt",          tier: 2, requires: null, cost: 2,
-    desc: "Melt also ignites the target (🔥 Burning, 3 turns)" },
+  // ── Melt (Frozen → Sun) ──
+  { key:"scorching_light", name:"Scorching Light", combo:"melt",          row:"effect", tier:1, cost:2,
+    desc:"Melt also ignites the target (🔥 Burning, 3 turns)" },
+  { key:"solar_inferno",   name:"Solar Inferno",   combo:"melt",          row:"effect", tier:2, cost:3,
+    desc:"Melt burning lasts 5 turns instead of 3" },
+  { key:"solar_flare",     name:"Solar Flare",     combo:"melt",          row:"damage", tier:1, cost:3,
+    desc:"Melt deals 125% bonus damage instead of 75%" },
+  { key:"solar_burst",     name:"Solar Burst",     combo:"melt",          row:"damage", tier:2, cost:4,
+    desc:"Melt deals 175% bonus damage instead of 125%" },
 
-  // ── Fan the Flames (Wind + Burning) ──
-  { key: "gale_force",      name: "Gale Force",      combo: "fan_flames",    tier: 1, requires: null, cost: 3,
-    desc: "Fan the Flames deals 100% bonus damage instead of 50%" },
-  { key: "windshear",       name: "Firestorm",        combo: "fan_flames",    tier: 2, requires: null, cost: 2,
-    desc: "Fan the Flames extends burning by 4 extra turns instead of 2" },
+  // ── Fan the Flames (Burning → Wind) ──
+  { key:"windshear",       name:"Firestorm",        combo:"fan_flames",    row:"effect", tier:1, cost:2,
+    desc:"Fan the Flames extends burning by 4 extra turns instead of 2" },
+  { key:"wildfire",        name:"Wildfire",          combo:"fan_flames",    row:"effect", tier:2, cost:3,
+    desc:"Fan the Flames extends burning by 6 extra turns instead of 4" },
+  { key:"gale_force",      name:"Gale Force",        combo:"fan_flames",    row:"damage", tier:1, cost:3,
+    desc:"Fan the Flames deals 100% bonus damage instead of 50%" },
+  { key:"hurricane_force", name:"Hurricane Force",   combo:"fan_flames",    row:"damage", tier:2, cost:4,
+    desc:"Fan the Flames deals 150% bonus damage instead of 100%" },
 
-  // ── Blizzard (Wind + Frozen) ──
-  { key: "blizzard_force",  name: "Blizzard Force",  combo: "blizzard",      tier: 1, requires: null, cost: 3,
-    desc: "Blizzard deals 150% bonus damage instead of 100%" },
-  { key: "arctic_gale",     name: "Arctic Gale",     combo: "blizzard",      tier: 2, requires: null, cost: 2,
-    desc: "Blizzard refreezes the target for 2 turns instead of 1" },
+  // ── Blizzard (Frozen → Wind) ──
+  { key:"arctic_gale",     name:"Arctic Gale",       combo:"blizzard",      row:"effect", tier:1, cost:2,
+    desc:"Blizzard refreezes the target for 2 turns instead of 1" },
+  { key:"permastorm",      name:"Permastorm",         combo:"blizzard",      row:"effect", tier:2, cost:3,
+    desc:"Blizzard refreezes the target for 3 turns instead of 2" },
+  { key:"blizzard_force",  name:"Blizzard Force",     combo:"blizzard",      row:"damage", tier:1, cost:3,
+    desc:"Blizzard deals 150% bonus damage instead of 100%" },
+  { key:"blizzard_surge",  name:"Blizzard Surge",     combo:"blizzard",      row:"damage", tier:2, cost:4,
+    desc:"Blizzard deals 200% bonus damage instead of 150%" },
 
-  // ── Deep Freeze (Snow + Drenched) ──
-  { key: "glacial_burst",   name: "Glacial Burst",   combo: "deep_freeze",   tier: 1, requires: null, cost: 3,
-    desc: "Deep Freeze shatters the ice for 75% bonus magic damage" },
-  { key: "permafrost",      name: "Permafrost",       combo: "deep_freeze",   tier: 2, requires: null, cost: 2,
-    desc: "Deep Freeze lasts 3 turns instead of 2" },
+  // ── Deep Freeze (Drenched → Snow) ──
+  { key:"permafrost",      name:"Permafrost",         combo:"deep_freeze",   row:"effect", tier:1, cost:2,
+    desc:"Deep Freeze lasts 3 turns instead of 2" },
+  { key:"absolute_zero",   name:"Absolute Zero",      combo:"deep_freeze",   row:"effect", tier:2, cost:3,
+    desc:"Deep Freeze lasts 4 turns instead of 3" },
+  { key:"glacial_burst",   name:"Glacial Burst",      combo:"deep_freeze",   row:"damage", tier:1, cost:3,
+    desc:"Deep Freeze shatters the ice for 75% bonus magic damage" },
+  { key:"glacial_shatter", name:"Glacial Shatter",    combo:"deep_freeze",   row:"damage", tier:2, cost:4,
+    desc:"Deep Freeze shatters the ice for 125% bonus magic damage" },
 
-  // ── Short Circuit (Lightning + Drenched) ──
-  { key: "overcharge",      name: "Overcharge",       combo: "short_circuit", tier: 1, requires: null, cost: 3,
-    desc: "Short Circuit deals 225% bonus damage instead of 150%" },
-  { key: "chain_lightning", name: "Chain Lightning",  combo: "short_circuit", tier: 2, requires: null, cost: 2,
-    desc: "Short Circuit fires a second hit for 50% bonus damage" },
+  // ── Short Circuit (Drenched → Lightning) ──
+  { key:"chain_lightning", name:"Chain Lightning",    combo:"short_circuit", row:"effect", tier:1, cost:2,
+    desc:"Short Circuit fires a second hit for 50% bonus damage" },
+  { key:"arc_flash",       name:"Arc Flash",           combo:"short_circuit", row:"effect", tier:2, cost:3,
+    desc:"Short Circuit fires a third hit for 25% bonus damage" },
+  { key:"overcharge",      name:"Overcharge",          combo:"short_circuit", row:"damage", tier:1, cost:3,
+    desc:"Short Circuit deals 225% bonus damage instead of 150%" },
+  { key:"megavolt",        name:"Megavolt",            combo:"short_circuit", row:"damage", tier:2, cost:4,
+    desc:"Short Circuit deals 300% bonus damage instead of 225%" },
 ];
 
 function spawnBoss(floor) {
@@ -1960,28 +1972,28 @@ function resolveAction(actor, action, timingMultiplier = 1.0) {
         const ase = actor.statusEffects || {};
 
         if (action.spellKey === "Sun" && target.alive) {
-          // Sun melts frozen targets — Solar Flare upgrades bonus to 125%
+          // Melt: Sun on Frozen — Solar Flare/Solar Burst upgrades damage bonus
           if ((tse.frozen || 0) > 0) {
-            const meltMult = STATE.skills.solar_flare ? 1.25 : 0.75;
+            const meltMult = STATE.skills.solar_burst ? 1.75 : STATE.skills.solar_flare ? 1.25 : 0.75;
             const bonusDmg = comboDmg(actor, meltMult);
             tse.frozen = 0;
             target.hp = Math.max(0, target.hp - bonusDmg);
             if (target.hp === 0) target.alive = false;
             addLog(`☀️ The heat melts the ice! ${target.name} takes ${bonusDmg} bonus fire damage!`, "magic");
-            // Scorching Light: melt also ignites
+            // Scorching Light: melt ignites (3 turns); Solar Inferno T2: 5 turns
             if (STATE.skills.scorching_light && target.alive && !(tse.burning > 0)) {
-              tse.burning = lingerDur(3);
-              addLog(`☀️ The scorching light sets ${target.name} ablaze! (🔥 Burning, ${tse.burning} turns)`, "status");
+              const burnDur = lingerDur(STATE.skills.solar_inferno ? 5 : 3);
+              tse.burning = burnDur;
+              addLog(`☀️ The scorching light sets ${target.name} ablaze! (🔥 Burning, ${burnDur} turns)`, "status");
             }
           }
         }
 
         if (action.spellKey === "Wind" && target.alive) {
-          // Wind + Burning → Fan the Flames
-          // Gale Force upgrades bonus 50%→100%; Firestorm extends burn by 4 instead of 2
+          // Fan the Flames: Wind on Burning
           if ((tse.burning || 0) > 0) {
-            const bonusMult  = STATE.skills.gale_force ? 1.0 : 0.5;
-            const burnExtend = lingerDur(STATE.skills.windshear ? 4 : 2);
+            const bonusMult  = STATE.skills.hurricane_force ? 1.5 : STATE.skills.gale_force ? 1.0 : 0.5;
+            const burnExtend = lingerDur(STATE.skills.wildfire ? 6 : STATE.skills.windshear ? 4 : 2);
             const bonusDmg   = comboDmg(actor, bonusMult);
             tse.burning += burnExtend;
             target.hp = Math.max(0, target.hp - bonusDmg);
@@ -1989,11 +2001,11 @@ function resolveAction(actor, action, timingMultiplier = 1.0) {
             addLog(`🌪️ The winds fan the flames! ${target.name} takes ${bonusDmg} bonus fire damage and burns ${burnExtend} more turns!`, "magic");
             animateHit(target.id);
           }
-          // Wind + Frozen → Blizzard
+          // Blizzard: Wind on Frozen
           if (target.alive && (tse.frozen || 0) > 0) {
-            const blizzardMult = STATE.skills.blizzard_force ? 1.5 : 1.0;
+            const blizzardMult = STATE.skills.blizzard_surge ? 2.0 : STATE.skills.blizzard_force ? 1.5 : 1.0;
             const blizzardDmg  = comboDmg(actor, blizzardMult);
-            const refreeze     = lingerDur(STATE.skills.arctic_gale ? 2 : 1);
+            const refreeze     = lingerDur(STATE.skills.permastorm ? 3 : STATE.skills.arctic_gale ? 2 : 1);
             tse.frozen = 0;
             target.hp = Math.max(0, target.hp - blizzardDmg);
             if (target.hp === 0) target.alive = false;
@@ -2017,17 +2029,18 @@ function resolveAction(actor, action, timingMultiplier = 1.0) {
         }
 
         if (action.spellKey === "Snow" && target.alive) {
-          // Snow deep-freezes drenched targets — Permafrost upgrades to 3 turns
+          // Deep Freeze: Snow on Drenched — Permafrost/Absolute Zero upgrades duration
           if ((tse.drenched || 0) > 0) {
-            const deepFreezeDur = STATE.skills.permafrost ? 3 : 2;
+            const deepFreezeDur = STATE.skills.absolute_zero ? 4 : STATE.skills.permafrost ? 3 : 2;
             tse.drenched = 0;
             tse.frozen = Math.max(tse.frozen || 0, deepFreezeDur);
-            // Glacial Burst: shatters the ice for bonus damage
-            if (STATE.skills.glacial_burst) {
-              const bonusDmg = comboDmg(actor, 0.75);
+            // Glacial Burst/Glacial Shatter: shatters ice for bonus damage
+            if (STATE.skills.glacial_burst || STATE.skills.glacial_shatter) {
+              const shatterMult = STATE.skills.glacial_shatter ? 1.25 : 0.75;
+              const bonusDmg = comboDmg(actor, shatterMult);
               target.hp = Math.max(0, target.hp - bonusDmg);
               if (target.hp === 0) target.alive = false;
-              addLog(`❄️ Glacial Burst! The ice shatters for ${bonusDmg} bonus damage!`, "magic");
+              addLog(`❄️ ${STATE.skills.glacial_shatter ? "Glacial Shatter" : "Glacial Burst"}! The ice shatters for ${bonusDmg} bonus damage!`, "magic");
               animateHit(target.id);
             }
             addLog(`❄️ The water flash-freezes! ${target.name} is deep-frozen for ${deepFreezeDur} turns!`, "status");
@@ -2035,9 +2048,9 @@ function resolveAction(actor, action, timingMultiplier = 1.0) {
         }
 
         if (action.spellKey === "Lightning" && target.alive) {
-          // Short Circuit — Overcharge upgrades bonus to 225%
+          // Short Circuit: Lightning on Drenched — Overcharge/Megavolt upgrades bonus
           if ((tse.drenched || 0) > 0) {
-            const scMult   = STATE.skills.overcharge ? 2.25 : 1.5;
+            const scMult   = STATE.skills.megavolt ? 3.0 : STATE.skills.overcharge ? 2.25 : 1.5;
             const bonusDmg = comboDmg(actor, scMult);
             tse.drenched = 0;
             target.hp = Math.max(0, target.hp - bonusDmg);
@@ -2050,6 +2063,14 @@ function resolveAction(actor, action, timingMultiplier = 1.0) {
               target.hp = Math.max(0, target.hp - chainDmg);
               if (target.hp === 0) target.alive = false;
               addLog(`⚡ Chain Lightning arcs back for ${chainDmg} more damage!`, "magic");
+              animateHit(target.id);
+            }
+            // Arc Flash: third hit at 25%
+            if (STATE.skills.arc_flash && target.alive) {
+              const arcDmg = comboDmg(actor, 0.25);
+              target.hp = Math.max(0, target.hp - arcDmg);
+              if (target.hp === 0) target.alive = false;
+              addLog(`⚡ Arc Flash discharges for ${arcDmg} more damage!`, "magic");
               animateHit(target.id);
             }
           }
@@ -2872,11 +2893,11 @@ function renderSkillTree() {
   container.innerHTML = "";
 
   const COMBO_BRANCHES = [
-    { key: "melt",          label: "Melt",          emoji: "☀️+❄️" },
-    { key: "fan_flames",    label: "Fan Flames",     emoji: "🌪️+🔥" },
-    { key: "blizzard",      label: "Blizzard",       emoji: "🌪️+❄️" },
-    { key: "deep_freeze",   label: "Deep Freeze",    emoji: "❄️+💧" },
-    { key: "short_circuit", label: "Short Circuit",  emoji: "⚡+💧" },
+    { key: "melt",          label: "Melt",          emoji: "❄️+☀️" },
+    { key: "fan_flames",    label: "Fan Flames",     emoji: "🔥+🌪️" },
+    { key: "blizzard",      label: "Blizzard",       emoji: "❄️+🌪️" },
+    { key: "deep_freeze",   label: "Deep Freeze",    emoji: "💧+❄️" },
+    { key: "short_circuit", label: "Short Circuit",  emoji: "💧+⚡" },
   ];
 
   function makeNodeCard(node) {
@@ -2918,37 +2939,27 @@ function renderSkillTree() {
   });
   container.appendChild(headerRow);
 
-  // Damage row (tier 1)
-  const dmgRow = document.createElement("div");
-  dmgRow.className = "skill-grid-row";
-  const dmgLabel = document.createElement("div");
-  dmgLabel.className = "skill-row-label";
-  dmgLabel.innerHTML = `⚔️<span>Damage</span>`;
-  dmgRow.appendChild(dmgLabel);
-  COMBO_BRANCHES.forEach(branch => {
-    const node = SKILL_TREE.find(n => n.combo === branch.key && n.tier === 1);
-    const cell = document.createElement("div");
-    cell.className = "skill-grid-cell";
-    if (node) cell.appendChild(makeNodeCard(node));
-    dmgRow.appendChild(cell);
-  });
-  container.appendChild(dmgRow);
+  function makeRow(labelHtml, filterFn) {
+    const row = document.createElement("div");
+    row.className = "skill-grid-row";
+    const lbl = document.createElement("div");
+    lbl.className = "skill-row-label";
+    lbl.innerHTML = labelHtml;
+    row.appendChild(lbl);
+    COMBO_BRANCHES.forEach(branch => {
+      const node = SKILL_TREE.find(n => n.combo === branch.key && filterFn(n));
+      const cell = document.createElement("div");
+      cell.className = "skill-grid-cell";
+      if (node) cell.appendChild(makeNodeCard(node));
+      row.appendChild(cell);
+    });
+    container.appendChild(row);
+  }
 
-  // Effect row (tier 2)
-  const fxRow = document.createElement("div");
-  fxRow.className = "skill-grid-row";
-  const fxLabel = document.createElement("div");
-  fxLabel.className = "skill-row-label";
-  fxLabel.innerHTML = `✨<span>Effect</span>`;
-  fxRow.appendChild(fxLabel);
-  COMBO_BRANCHES.forEach(branch => {
-    const node = SKILL_TREE.find(n => n.combo === branch.key && n.tier === 2);
-    const cell = document.createElement("div");
-    cell.className = "skill-grid-cell";
-    if (node) cell.appendChild(makeNodeCard(node));
-    fxRow.appendChild(cell);
-  });
-  container.appendChild(fxRow);
+  makeRow(`✨<span>Effect</span>`,   n => n.row === "effect" && n.tier === 1);
+  makeRow(`✨<span>Effect+</span>`,  n => n.row === "effect" && n.tier === 2);
+  makeRow(`⚔️<span>Damage</span>`,  n => n.row === "damage" && n.tier === 1);
+  makeRow(`⚔️<span>Damage+</span>`, n => n.row === "damage" && n.tier === 2);
 }
 
 document.getElementById("btn-open-skill-tree").addEventListener("click", () => {
