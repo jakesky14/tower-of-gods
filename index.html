@@ -1308,10 +1308,11 @@
   <div id="floor-select-title">Choose Your Trial</div>
   <div id="floor-select-sub">How many floors will you climb?</div>
   <div id="floor-select-buttons">
-    <button class="floor-btn" data-floors="5">5 Floors</button>
     <button class="floor-btn" data-floors="10">10 Floors</button>
-    <button class="floor-btn" data-floors="15">15 Floors</button>
     <button class="floor-btn" data-floors="20">20 Floors</button>
+    <button class="floor-btn" data-floors="30">30 Floors</button>
+    <button class="floor-btn" data-floors="40">40 Floors</button>
+    <button class="floor-btn" data-floors="50">50 Floors</button>
   </div>
   <button id="floor-select-test">⚙ Testing Mode</button>
 </div>
@@ -1529,6 +1530,40 @@ const HERO_TEMPLATES = [
 ];
 
 // Boss Rush — five elemental gods cycling with escalating names each cycle
+// Floors 1-5 of each cycle — weaker spirits
+const SPIRIT_POOL = [
+  { id: "sunspirit",   baseName: "Sun Spirit",       type: "enemy", sprite: "🌤️",
+    hp: 70,  maxHp: 70,  stats: { atk: 14, def: 6,  spd: 22 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "sungoddess",
+    title: "A Flicker of What Once Was", resistance: "Sun",
+    attacks: [["twin", 0.45], ["strike", 0.35], ["triple", 0.20]] },
+
+  { id: "windspirit",  baseName: "Wind Spirit",      type: "enemy", sprite: "💨",
+    hp: 60,  maxHp: 60,  stats: { atk: 15, def: 4,  spd: 36 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "windgod",
+    title: "A Restless Breeze Gone Wrong", resistance: "Wind",
+    attacks: [["feint", 0.45], ["twin", 0.35], ["strike", 0.20]] },
+
+  { id: "rainspirit",  baseName: "Rain Spirit",      type: "enemy", sprite: "🌦️",
+    hp: 90,  maxHp: 90,  stats: { atk: 12, def: 8,  spd: 16 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "raingod",
+    title: "A Drizzle Turned Sour", resistance: "Rain",
+    attacks: [["twin", 0.50], ["strike", 0.30], ["triple", 0.20]] },
+
+  { id: "snowspirit",  baseName: "Snow Spirit",      type: "enemy", sprite: "🌨️",
+    hp: 80,  maxHp: 80,  stats: { atk: 16, def: 6,  spd: 18 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "snowgoddess",
+    title: "A Cold That Should Not Linger", resistance: "Snow",
+    attacks: [["strike", 0.45], ["twin", 0.35], ["bounce", 0.20]] },
+
+  { id: "lightspirit", baseName: "Lightning Spirit", type: "enemy", sprite: "🌩️",
+    hp: 75,  maxHp: 75,  stats: { atk: 18, def: 4,  spd: 32 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "lightninggod",
+    title: "A Spark Without Purpose", resistance: "Lightning",
+    attacks: [["twin", 0.50], ["strike", 0.30], ["triple", 0.20]] },
+];
+
+// Floors 6-10 of each cycle — the full gods
 const BOSS_POOL = [
   { id: "sungod",    baseName: "Sun Goddess",    type: "enemy", sprite: "☀️",
     hp: 130, maxHp: 130, stats: { atk: 20, def: 10, spd: 28 },
@@ -1559,6 +1594,7 @@ const BOSS_POOL = [
     spells: [], statusEffects: {}, alive: true, aiProfile: "lightninggod",
     title: "Judgment Without Mercy or End", resistance: "Lightning",
     attacks: [["barrage", 0.50], ["triple", 0.30], ["twin", 0.20]] },
+
 ];
 
 // Final boss — scales with the chosen floor count
@@ -1570,50 +1606,51 @@ const LUNA_BOSS = {
   attacks: [["barrage", 0.25], ["triple", 0.25], ["twin", 0.20], ["feint", 0.20], ["bounce", 0.10]],
 };
 
-const CYCLE_PREFIXES = ["Crazed", "Distorted", "Dark", "Corrupt"];
+const CYCLE_PREFIXES = ["Crazed", "Distorted", "Dark", "Corrupt", "Hellish"];
 
 // ─── SKILL TREE ───────────────────────────────────────────────────────────────
 const SKILL_TREE = [
   // ── Melt (Sun + Frozen) ──
-  { key: "solar_flare",     name: "Solar Flare",     combo: "melt",          tier: 1, requires: null,             cost: 1,
+  { key: "solar_flare",     name: "Solar Flare",     combo: "melt",          tier: 1, requires: null, cost: 3,
     desc: "Melt deals 125% bonus damage instead of 75%" },
-  { key: "scorching_light", name: "Scorching Light", combo: "melt",          tier: 2, requires: "solar_flare",    cost: 2,
+  { key: "scorching_light", name: "Scorching Light", combo: "melt",          tier: 2, requires: null, cost: 2,
     desc: "Melt also ignites the target (🔥 Burning, 3 turns)" },
 
   // ── Fan the Flames (Wind + Burning) ──
-  { key: "gale_force",      name: "Gale Force",      combo: "fan_flames",    tier: 1, requires: null,             cost: 1,
+  { key: "gale_force",      name: "Gale Force",      combo: "fan_flames",    tier: 1, requires: null, cost: 3,
     desc: "Fan the Flames deals 100% bonus damage instead of 50%" },
-  { key: "windshear",       name: "Firestorm",        combo: "fan_flames",    tier: 2, requires: "gale_force",     cost: 2,
+  { key: "windshear",       name: "Firestorm",        combo: "fan_flames",    tier: 2, requires: null, cost: 2,
     desc: "Fan the Flames extends burning by 4 extra turns instead of 2" },
 
   // ── Blizzard (Wind + Frozen) ──
-  { key: "blizzard_force",  name: "Blizzard Force",  combo: "blizzard",      tier: 1, requires: null,             cost: 1,
+  { key: "blizzard_force",  name: "Blizzard Force",  combo: "blizzard",      tier: 1, requires: null, cost: 3,
     desc: "Blizzard deals 150% bonus damage instead of 100%" },
-  { key: "arctic_gale",     name: "Arctic Gale",     combo: "blizzard",      tier: 2, requires: "blizzard_force", cost: 2,
+  { key: "arctic_gale",     name: "Arctic Gale",     combo: "blizzard",      tier: 2, requires: null, cost: 2,
     desc: "Blizzard refreezes the target for 2 turns instead of 1" },
 
   // ── Deep Freeze (Snow + Drenched) ──
-  { key: "glacial_burst",   name: "Glacial Burst",   combo: "deep_freeze",   tier: 1, requires: null,             cost: 1,
+  { key: "glacial_burst",   name: "Glacial Burst",   combo: "deep_freeze",   tier: 1, requires: null, cost: 3,
     desc: "Deep Freeze shatters the ice for 75% bonus magic damage" },
-  { key: "permafrost",      name: "Permafrost",       combo: "deep_freeze",   tier: 2, requires: "glacial_burst",  cost: 2,
+  { key: "permafrost",      name: "Permafrost",       combo: "deep_freeze",   tier: 2, requires: null, cost: 2,
     desc: "Deep Freeze lasts 3 turns instead of 2" },
 
   // ── Short Circuit (Lightning + Drenched) ──
-  { key: "overcharge",      name: "Overcharge",       combo: "short_circuit", tier: 1, requires: null,             cost: 1,
+  { key: "overcharge",      name: "Overcharge",       combo: "short_circuit", tier: 1, requires: null, cost: 3,
     desc: "Short Circuit deals 225% bonus damage instead of 150%" },
-  { key: "chain_lightning", name: "Chain Lightning",  combo: "short_circuit", tier: 2, requires: "overcharge",     cost: 2,
+  { key: "chain_lightning", name: "Chain Lightning",  combo: "short_circuit", tier: 2, requires: null, cost: 2,
     desc: "Short Circuit fires a second hit for 50% bonus damage" },
 ];
 
 function spawnBoss(floor) {
-  const poolSize  = BOSS_POOL.length; // 5
-  const bossIndex = (floor - 1) % poolSize;
-  const cycle     = Math.floor((floor - 1) / poolSize);
-  const prefix    = CYCLE_PREFIXES[Math.min(cycle, CYCLE_PREFIXES.length - 1)];
-  const base = deepClone(BOSS_POOL[bossIndex]);
+  const cyclePos = (floor - 1) % 10; // 0-9 within each 10-floor block
+  const cycle    = Math.floor((floor - 1) / 10);
+  const prefix   = CYCLE_PREFIXES[Math.min(cycle, CYCLE_PREFIXES.length - 1)];
+  const base = cyclePos < 5
+    ? deepClone(SPIRIT_POOL[cyclePos])
+    : deepClone(BOSS_POOL[cyclePos - 5]);
   base.name = `${prefix} ${base.baseName}`;
-  const hpScale  = Math.pow(1.30, floor - 1);
-  const atkScale = Math.pow(1.25, floor - 1);
+  const hpScale  = Math.pow(1.12, floor - 1);
+  const atkScale = Math.pow(1.10, floor - 1);
   base.maxHp = base.hp = Math.floor(base.maxHp * hpScale);
   base.stats.atk = Math.floor(base.stats.atk * atkScale);
   return base;
@@ -1622,8 +1659,8 @@ function spawnBoss(floor) {
 function spawnLuna() {
   const base = deepClone(LUNA_BOSS);
   // Scale to match the chosen difficulty (floor count)
-  const hpScale  = Math.pow(1.25, STATE.maxFloors - 1);
-  const atkScale = Math.pow(1.20, STATE.maxFloors - 1);
+  const hpScale  = Math.pow(1.10, STATE.maxFloors);
+  const atkScale = Math.pow(1.07, STATE.maxFloors);
   base.maxHp = base.hp = Math.floor(base.maxHp * hpScale);
   base.stats.atk = Math.floor(base.stats.atk * atkScale);
   return base;
@@ -1647,7 +1684,7 @@ const STATE = {
   heroLevel: 1,
   quickCast: false,
   blockMultiplier: 1.0,
-  maxFloors: 5,
+  maxFloors: 10,
   lunaFight: false,
   testMode: false,
   testAtkBonus: 0,
@@ -3231,19 +3268,32 @@ function buildBossSelectScreen() {
     label.textContent = `— ${prefix} —`;
     list.appendChild(label);
 
-    const row = document.createElement("div");
-    row.className = "boss-cycle-row";
+    // Spirits row (floors 1-5 of this cycle)
+    const spiritRow = document.createElement("div");
+    spiritRow.className = "boss-cycle-row";
+    SPIRIT_POOL.forEach((template, i) => {
+      const floor = cycle * 10 + i + 1;
+      const btn = document.createElement("button");
+      btn.className = "boss-test-btn";
+      btn.style.opacity = "0.75";
+      btn.textContent = `${template.sprite} ${prefix} ${template.baseName}`;
+      btn.addEventListener("click", () => startTestBattle(floor, false));
+      spiritRow.appendChild(btn);
+    });
+    list.appendChild(spiritRow);
 
-    BOSS_POOL.forEach((template, bossIdx) => {
-      const floor = cycle * BOSS_POOL.length + bossIdx + 1;
+    // Gods row (floors 6-10 of this cycle)
+    const godRow = document.createElement("div");
+    godRow.className = "boss-cycle-row";
+    BOSS_POOL.forEach((template, i) => {
+      const floor = cycle * 10 + 5 + i + 1;
       const btn = document.createElement("button");
       btn.className = "boss-test-btn";
       btn.textContent = `${template.sprite} ${prefix} ${template.baseName}`;
       btn.addEventListener("click", () => startTestBattle(floor, false));
-      row.appendChild(btn);
+      godRow.appendChild(btn);
     });
-
-    list.appendChild(row);
+    list.appendChild(godRow);
   });
 
   // Luna button
@@ -3255,7 +3305,7 @@ function buildBossSelectScreen() {
 
   const lunaRow = document.createElement("div");
   lunaRow.className = "boss-cycle-row";
-  [5, 10, 15, 20].forEach(floors => {
+  [10, 20, 30, 40, 50].forEach(floors => {
     const btn = document.createElement("button");
     btn.className = "boss-test-btn luna-btn";
     btn.textContent = `🌙 Luna — ${floors} Floors`;
@@ -3316,7 +3366,7 @@ function buildBossSelectScreen() {
   list.appendChild(csRow);
 }
 
-function startTestBattle(floor, isLuna, lunaFloors = 20) {
+function startTestBattle(floor, isLuna, lunaFloors = 50) {
   document.getElementById("boss-select").classList.add("hidden");
 
   // Reset hero and state
