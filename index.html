@@ -1,0 +1,3401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Tower of Gods</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d0d1a;
+    color: #e8e0d0;
+    font-family: 'Cinzel', serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #battle-screen {
+    width: 900px;
+    max-width: 100vw;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  /* Header */
+  #battle-header {
+    position: relative;
+    text-align: center;
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    color: #c9a84c;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  #btn-give-up {
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.6rem;
+    padding: 3px 10px;
+    background: transparent;
+    border: 1px solid #3f1a1a;
+    color: #64352a;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  #btn-give-up:hover { color: #f87171; border-color: #7f1d1d; }
+
+  /* Enemy Row */
+  #enemy-row {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    min-height: 160px;
+    align-items: flex-end;
+  }
+
+  .enemy-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 8px;
+    min-width: 110px;
+    transition: opacity 0.8s, filter 0.8s;
+    cursor: pointer;
+  }
+
+  .enemy-card:hover:not(.dead) {
+    border-color: rgba(201,168,76,0.6);
+    background: rgba(255,255,255,0.06);
+  }
+
+  .enemy-card.targetable {
+    border-color: #c9a84c;
+    box-shadow: 0 0 12px rgba(201,168,76,0.4);
+    animation: pulse-gold 1.2s ease-in-out infinite;
+  }
+
+  .enemy-card.dead {
+    filter: grayscale(1);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .enemy-card.flash-red { animation: flash-red 0.4s ease; }
+
+  .unit-sprite {
+    font-size: 3rem;
+    line-height: 1;
+  }
+
+  .enemy-card .unit-sprite { font-size: 3.5rem; }
+
+  .unit-name {
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #c9a84c;
+    white-space: nowrap;
+  }
+
+  /* Battle Log */
+  #battle-log {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 6px;
+    padding: 10px 14px;
+    height: 130px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.78rem;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+  }
+
+  #battle-log::-webkit-scrollbar { width: 4px; }
+  #battle-log::-webkit-scrollbar-thumb { background: #c9a84c44; border-radius: 2px; }
+
+  .log-entry {
+    line-height: 1.5;
+    animation: slide-in 0.2s ease;
+  }
+  .log-attack { color: #f0e6d0; }
+  .log-magic  { color: #93c5fd; }
+  .log-heal   { color: #86efac; }
+  .log-status { color: #d8b4fe; }
+  .log-system { color: #c9a84c; }
+  .log-crit   { color: #fbbf24; font-weight: bold; }
+
+  /* Hero Status Row */
+  #hero-status-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .hero-status-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 8px;
+    padding: 14px 20px;
+    width: 420px;
+    transition: border-color 0.3s;
+  }
+
+  .hero-status-card.active {
+    border-color: #c9a84c;
+    animation: pulse-gold 1.2s ease-in-out infinite;
+  }
+
+  .hero-status-card.dead {
+    filter: grayscale(1);
+    opacity: 0.4;
+  }
+
+  .hero-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .hero-sprite { font-size: 1.4rem; }
+
+  .hero-name {
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #c9a84c;
+  }
+
+  .status-icons { font-size: 0.75rem; margin-left: auto; }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .bar-label {
+    font-size: 0.6rem;
+    font-family: monospace;
+    width: 20px;
+    color: #a0a0b0;
+  }
+
+  .mp-label { color: #93c5fd; }
+
+  .bar-wrap {
+    flex: 1;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  .hp-bar, .mp-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease, background 0.4s ease;
+  }
+
+  .mp-bar { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+
+  .bar-val {
+    font-size: 0.58rem;
+    font-family: monospace;
+    color: #a0a0b0;
+    width: 62px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* Action Panel */
+  #action-panel {
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(201,168,76,0.35);
+    border-radius: 8px;
+    padding: 14px 18px;
+    min-height: 120px;
+    position: relative;
+  }
+
+  .utility-btn {
+    background: transparent;
+    border-color: #334155;
+    color: #94a3b8;
+    font-size: 0.62rem;
+    padding: 5px 6px;
+    letter-spacing: 0.5px;
+  }
+  .utility-btn:hover:not(:disabled) {
+    background: rgba(148,163,184,0.08) !important;
+    border-color: #64748b !important;
+    color: #e2e8f0 !important;
+    box-shadow: none !important;
+  }
+  #btn-pass {
+    width: 100%;
+    margin-top: 8px;
+    font-size: 0.62rem;
+    padding: 5px 8px;
+    background: transparent;
+    border-color: #334155;
+    color: #64748b;
+    letter-spacing: 0.5px;
+  }
+  #btn-pass:hover:not(:disabled) {
+    background: rgba(100,116,139,0.1) !important;
+    border-color: #475569 !important;
+    color: #94a3b8 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  #combo-ref-close {
+    float: right;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #64748b;
+    font-size: 0.8rem;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: monospace;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  #combo-ref-close:hover { color: #94a3b8; border-color: #64748b; }
+
+  #combo-ref-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(5, 8, 20, 0.97);
+    border-top: 1px solid rgba(201,168,76,0.3);
+    padding: 16px 20px 20px;
+    z-index: 90;
+    max-height: 60vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+  }
+  #combo-ref-panel.open { transform: translateY(0); }
+  #combo-ref-title {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: #c9a84c;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .combo-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .combo-trigger {
+    white-space: nowrap;
+    color: #fbbf24;
+    min-width: 160px;
+    font-family: monospace;
+  }
+  .combo-effect { color: #94a3b8; }
+  .combo-effect strong { color: #e2e8f0; }
+
+  .menu { display: none; }
+  .menu.active { display: block; }
+
+  .acting-label {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c9a84c;
+    margin-bottom: 10px;
+  }
+
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  button {
+    background: #1a1730;
+    border: 1px solid #c9a84c;
+    color: #e8e0d0;
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    padding: 10px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+
+  button:hover:not(:disabled) {
+    background: #251e42;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(201,168,76,0.25);
+  }
+
+  button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: #555;
+  }
+
+  .back-btn {
+    font-size: 0.65rem;
+    padding: 6px 12px;
+    margin-bottom: 8px;
+    background: transparent;
+    border-color: #555;
+    color: #a0a0b0;
+  }
+
+  .submenu-label {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c9a84c;
+    margin-bottom: 8px;
+  }
+
+  .spell-list, .target-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .spell-btn {
+    font-size: 0.68rem;
+    padding: 8px 12px;
+    white-space: nowrap;
+  }
+
+  .spell-btn .mp-cost {
+    font-size: 0.55rem;
+    display: block;
+    margin-top: 2px;
+    font-family: monospace;
+  }
+  .cd-ready  { color: #86efac; }
+  .cd-active { color: #f87171; }
+
+  .target-btn {
+    font-size: 0.7rem;
+    padding: 8px 14px;
+  }
+
+  .enemy-turn-msg {
+    color: #f87171;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-align: center;
+    padding: 20px;
+  }
+
+  /* Overlay */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: background 0.5s;
+  }
+
+  .hidden { display: none !important; }
+
+  #overlay-box {
+    text-align: center;
+    padding: 40px 60px;
+    background: rgba(10,8,20,0.95);
+    border: 2px solid #c9a84c;
+    border-radius: 12px;
+    box-shadow: 0 0 60px rgba(201,168,76,0.3);
+  }
+
+  #overlay-title {
+    font-size: 2rem;
+    color: #c9a84c;
+    margin-bottom: 12px;
+  }
+
+  #overlay-subtitle {
+    font-size: 0.85rem;
+    color: #a0a0b0;
+    margin-bottom: 28px;
+    font-family: monospace;
+    letter-spacing: 1px;
+  }
+
+  #btn-restart {
+    font-size: 0.85rem;
+    padding: 12px 32px;
+  }
+
+  .upgrade-label {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c9a84c;
+    margin-bottom: 12px;
+  }
+
+  .upgrade-grid {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+
+  .upgrade-grid button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 14px 18px;
+    min-width: 120px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+
+  .upgrade-desc {
+    display: block;
+    font-size: 0.6rem;
+    font-family: monospace;
+    color: #a0a0b0;
+    margin-top: 4px;
+    letter-spacing: 0;
+  }
+
+  /* ── Skill tree stars row in upgrade overlay ── */
+  #skill-tree-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(201,168,76,0.2);
+  }
+  #skill-stars-display {
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: #fbbf24;
+    letter-spacing: 1px;
+  }
+  #btn-open-skill-tree {
+    font-size: 0.72rem;
+    padding: 7px 16px;
+    background: transparent;
+    border: 1px solid rgba(201,168,76,0.5);
+    color: #c9a84c;
+  }
+  #btn-open-skill-tree:hover { background: rgba(201,168,76,0.1); }
+
+  /* ── Skill tree modal ── */
+  #skill-tree-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 4, 15, 0.94);
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #skill-tree-modal.hidden { display: none !important; }
+  #skill-tree-box {
+    background: rgba(10, 8, 20, 0.98);
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 10px;
+    padding: 20px 24px 24px;
+    max-width: 760px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  #skill-tree-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+  #skill-tree-title {
+    font-size: 1rem;
+    letter-spacing: 3px;
+    color: #c9a84c;
+    text-transform: uppercase;
+    flex: 1;
+  }
+  #skill-tree-stars {
+    font-size: 0.8rem;
+    font-family: monospace;
+    color: #fbbf24;
+    letter-spacing: 1px;
+  }
+  #skill-tree-close {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #64748b;
+  }
+  #skill-tree-close:hover { color: #94a3b8; border-color: #64748b; }
+  #skill-tree-branches {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .skill-grid-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+  }
+  .skill-row-label {
+    width: 46px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.62rem;
+    color: #64748b;
+    gap: 3px;
+    padding-top: 4px;
+  }
+  .skill-row-label span { font-size: 0.55rem; letter-spacing: 0.5px; }
+  .skill-col-header {
+    flex: 1;
+    text-align: center;
+    padding: 4px 2px 6px;
+    font-size: 0.75rem;
+  }
+  .skill-col-label {
+    font-size: 0.5rem;
+    color: #64748b;
+    font-family: monospace;
+    line-height: 1.3;
+    margin-top: 2px;
+  }
+  .skill-grid-cell { flex: 1; }
+  .skill-grid-cell .skill-node { width: 100%; box-sizing: border-box; }
+  .skill-node {
+    width: 100%;
+    background: rgba(20, 18, 36, 0.9);
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    padding: 8px 10px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-family: 'Cinzel', serif;
+  }
+  .skill-node.available {
+    border-color: rgba(201,168,76,0.5);
+    cursor: pointer;
+  }
+  .skill-node.available:hover {
+    border-color: #c9a84c;
+    background: rgba(201,168,76,0.08);
+  }
+  .skill-node.purchased {
+    border-color: #c9a84c;
+    background: rgba(201,168,76,0.12);
+    cursor: default;
+  }
+  .skill-node.locked {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .skill-node-name {
+    font-size: 0.65rem;
+    color: #e2e8f0;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .skill-node.purchased .skill-node-name { color: #fbbf24; }
+  .skill-node-desc {
+    font-size: 0.58rem;
+    font-family: monospace;
+    color: #64748b;
+    line-height: 1.4;
+    margin-bottom: 5px;
+  }
+  .skill-node.purchased .skill-node-desc { color: #94a3b8; }
+  .skill-node-cost {
+    font-size: 0.62rem;
+    font-family: monospace;
+    color: #475569;
+  }
+  .skill-node.available .skill-node-cost { color: #fbbf24; }
+  .skill-node.purchased .skill-node-cost { color: #c9a84c; }
+  .skill-branch-arrow {
+    font-size: 0.75rem;
+    color: #334155;
+  }
+  .skill-global-section {
+    width: 100%;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .skill-global-label {
+    font-size: 0.7rem;
+    color: #64748b;
+    letter-spacing: 0.08em;
+  }
+  .skill-global-row {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    justify-content: center;
+  }
+  .skill-global-row .skill-node {
+    width: 140px;
+  }
+
+  /* Animations */
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 8px rgba(201,168,76,0.4); }
+    50%       { box-shadow: 0 0 24px rgba(251,191,36,0.7); }
+  }
+
+  @keyframes flash-red {
+    0%   { filter: brightness(1); }
+    30%  { filter: brightness(2.5) sepia(1) hue-rotate(-20deg); }
+    100% { filter: brightness(1); }
+  }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spell-fx {
+    0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.5); }
+    40%  { opacity: 1; transform: translate(-50%,-50%) scale(1.4); }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(1); }
+  }
+
+  .spell-fx-overlay {
+    position: fixed;
+    font-size: 4rem;
+    pointer-events: none;
+    z-index: 50;
+    animation: spell-fx 0.7s ease forwards;
+  }
+
+  /* Timing Bar */
+  #timing-bar-wrap { padding: 6px 0; }
+  #timing-bar-wrap.hidden { display: none; } /* covered by .hidden but kept for clarity */
+
+  #timing-label {
+    text-align: center;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #c9a84c;
+    margin-bottom: 6px;
+  }
+
+  #timing-track {
+    position: relative;
+    height: 30px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  #timing-zone-good {
+    position: absolute;
+    top: 0; bottom: 0;
+    background: rgba(134,239,172,0.18);
+  }
+
+  #timing-zone-perfect {
+    position: absolute;
+    top: 0; bottom: 0;
+    background: rgba(201,168,76,0.35);
+    border-left: 2px solid #c9a84c;
+    border-right: 2px solid #c9a84c;
+  }
+
+  #timing-cursor {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 3px;
+    background: #fff;
+    box-shadow: 0 0 8px #fff, 0 0 2px #fff;
+    border-radius: 2px;
+    left: 0%;
+  }
+
+  #timing-result {
+    text-align: center;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    height: 22px;
+    margin-top: 4px;
+    font-weight: bold;
+  }
+
+  .timing-perfect { color: #fbbf24; }
+  .timing-good    { color: #86efac; }
+  .timing-miss    { color: #f87171; }
+
+  /* ── Cutscene ── */
+  #cutscene {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 40px;
+    cursor: pointer;
+  }
+  #cutscene.hidden { display: none !important; }
+  #cutscene-text {
+    font-size: 1.25rem;
+    color: #e2e8f0;
+    text-align: center;
+    max-width: 640px;
+    line-height: 1.9;
+    min-height: 120px;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  #cutscene-text.visible { opacity: 1; }
+  #cutscene-panel-num {
+    position: absolute;
+    bottom: 60px;
+    font-size: 0.75rem;
+    color: #475569;
+    letter-spacing: 2px;
+  }
+  #cutscene-hint {
+    position: absolute;
+    bottom: 36px;
+    font-size: 0.75rem;
+    color: #334155;
+    animation: cs-blink 1.6s ease-in-out infinite;
+  }
+  @keyframes cs-blink {
+    0%, 100% { opacity: 0.3; }
+    50%       { opacity: 1;   }
+  }
+  #cutscene-title {
+    font-size: 0.8rem;
+    letter-spacing: 4px;
+    color: #fbbf24;
+    margin-bottom: 48px;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+  }
+  #cutscene-title.visible { opacity: 1; }
+  #btn-begin {
+    margin-top: 48px;
+    padding: 14px 48px;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    background: transparent;
+    border: 1px solid #fbbf24;
+    color: #fbbf24;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.8s ease, background 0.2s;
+    pointer-events: none;
+  }
+  #btn-begin.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #btn-begin:hover { background: rgba(251,191,36,0.12); }
+
+  /* ── Floor select ── */
+  #floor-select {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 40px;
+  }
+  #floor-select.hidden { display: none !important; }
+  #floor-select-title {
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    color: #fbbf24;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  #floor-select-sub {
+    font-size: 0.95rem;
+    color: #94a3b8;
+    margin-bottom: 48px;
+    letter-spacing: 1px;
+  }
+  #floor-select-buttons {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .floor-btn {
+    padding: 18px 36px;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    background: transparent;
+    border: 1px solid #fbbf24;
+    color: #fbbf24;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .floor-btn:hover { background: rgba(251,191,36,0.14); transform: scale(1.05); }
+  #floor-select-test {
+    margin-top: 36px;
+    padding: 12px 32px;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    background: transparent;
+    border: 1px solid #475569;
+    color: #64748b;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  #floor-select-test:hover { background: rgba(100,116,139,0.15); color: #94a3b8; }
+
+  /* ── Boss select (testing mode) ── */
+  #boss-select {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 40px 20px;
+    overflow-y: auto;
+    z-index: 200;
+  }
+  #boss-select.hidden { display: none !important; }
+  #boss-select-title {
+    font-size: 1.3rem;
+    letter-spacing: 4px;
+    color: #fbbf24;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  #boss-select-sub {
+    font-size: 0.8rem;
+    color: #475569;
+    margin-bottom: 32px;
+    letter-spacing: 1px;
+  }
+  .boss-cycle-label {
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: #475569;
+    text-transform: uppercase;
+    margin: 16px 0 8px;
+    align-self: flex-start;
+    max-width: 700px;
+    width: 100%;
+  }
+  .boss-cycle-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    max-width: 700px;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .boss-test-btn {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    white-space: nowrap;
+  }
+  .boss-test-btn:hover { background: rgba(203,213,225,0.08); border-color: #64748b; }
+  .boss-test-btn.luna-btn { border-color: #6366f1; color: #a5b4fc; }
+  .boss-test-btn.luna-btn:hover { background: rgba(99,102,241,0.15); }
+  #test-hero-setup {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: 700px;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .test-stat-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+  .test-stat-control span { min-width: 90px; }
+  .test-stat-val {
+    font-family: monospace;
+    font-size: 0.95rem;
+    color: #fbbf24;
+    min-width: 40px;
+    text-align: center;
+  }
+  .test-stat-btn {
+    width: 26px; height: 26px;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .test-stat-btn:hover { background: rgba(148,163,184,0.1); color: #e2e8f0; }
+  #boss-select-back {
+    margin-top: 28px;
+    padding: 10px 28px;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    background: transparent;
+    border: 1px solid #1e293b;
+    color: #475569;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  #boss-select-back:hover { color: #94a3b8; }
+
+  /* ── Critical banner ── */
+  @keyframes crit-burst {
+    0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.2) rotate(-8deg); }
+    18%  { opacity: 1; transform: translate(-50%,-50%) scale(1.2) rotate(4deg);  }
+    45%  { opacity: 1; transform: translate(-50%,-50%) scale(1.0) rotate(0deg);  }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(0.85) rotate(6deg); }
+  }
+  #crit-banner {
+    position: fixed;
+    top: 38%; left: 50%;
+    transform: translate(-50%,-50%);
+    pointer-events: none;
+    z-index: 150;
+    opacity: 0;
+  }
+  #crit-banner.show { animation: crit-burst 1.3s ease forwards; }
+  #crit-burst-shape {
+    background: linear-gradient(135deg, #ef4444, #f97316, #fbbf24);
+    clip-path: polygon(
+      50% 0%,  56% 22%, 79% 9%,  67% 29%, 93% 28%, 74% 46%,
+      100% 50%,74% 54%, 93% 72%, 67% 71%, 79% 91%, 56% 78%,
+      50% 100%,44% 78%, 21% 91%, 33% 71%, 7%  72%, 26% 54%,
+      0%  50%, 26% 46%, 7%  28%, 33% 29%, 21% 9%,  44% 22%
+    );
+    width: 230px; height: 230px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #crit-text {
+    font-size: 1.4rem; font-weight: bold; color: #fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.9); letter-spacing: 3px;
+    text-align: center; line-height: 1.2;
+  }
+
+  /* ── Turn banner ── */
+  @keyframes turn-banner-anim {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+    15%  { opacity: 1; transform: translate(-50%, -50%) scale(1);   }
+    65%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  #turn-banner {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 40vh;
+    background: rgba(0,0,0,0.72);
+    border: 2px solid #fbbf24;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0;
+  }
+  #turn-banner.animating {
+    animation: turn-banner-anim 3s ease forwards;
+  }
+  #turn-banner-text {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #fbbf24;
+    text-shadow: 0 2px 12px #000;
+    text-align: center;
+  }
+  #turn-banner-sub {
+    font-size: 1.1rem;
+    color: #cbd5e1;
+  }
+
+  /* ── Title Screen ─────────────────────────────────────────────────────────── */
+  #title-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 400;
+    overflow: hidden;
+  }
+  #title-screen.hidden { display: none !important; }
+
+  #title-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 30%, rgba(60,20,100,0.55) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 20% 70%, rgba(20,60,120,0.4) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 25% at 80% 60%, rgba(100,30,30,0.35) 0%, transparent 55%),
+      linear-gradient(175deg, #03020f 0%, #080520 40%, #0d0730 70%, #060318 100%);
+  }
+  /* Moon */
+  #title-bg::before {
+    content: "";
+    position: absolute;
+    top: 8%;
+    right: 18%;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 38%, #f0e8c8 0%, #d4c88a 40%, #8a7840 80%, #3a3010 100%);
+    box-shadow: 0 0 60px 20px rgba(220,200,100,0.18), 0 0 120px 40px rgba(200,170,60,0.1);
+  }
+  /* Tower silhouette */
+  #title-bg::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 55%;
+    background: linear-gradient(to top, #000 0%, #0a0818 60%, transparent 100%);
+    clip-path: polygon(30% 100%, 30% 45%, 35% 40%, 35% 35%, 38% 30%, 38% 20%, 42% 15%, 42% 10%, 50% 0%, 58% 10%, 58% 15%, 62% 20%, 62% 30%, 65% 35%, 65% 40%, 70% 45%, 70% 100%);
+  }
+  #title-stars {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.8) 0%, transparent 100%),
+      radial-gradient(1px 1px at 25% 8%,  rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 40% 20%, rgba(255,255,255,0.9) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 5%,  rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 12%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 85% 18%, rgba(255,255,255,0.8) 0%, transparent 100%),
+      radial-gradient(1px 1px at 15% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 25%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 90% 8%, rgba(255,255,255,0.9) 0%, transparent 100%),
+      radial-gradient(1px 1px at 32% 38%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 78% 32%, rgba(255,255,255,0.7) 0%, transparent 100%),
+      radial-gradient(1px 1px at 5%  22%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 48% 42%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 92% 28%, rgba(255,255,255,0.8) 0%, transparent 100%),
+      radial-gradient(1px 1px at 20% 48%, rgba(255,255,255,0.3) 0%, transparent 100%);
+    pointer-events: none;
+  }
+  #title-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    text-align: center;
+    padding: 40px 32px;
+    max-width: 480px;
+  }
+  #title-eyebrow {
+    font-family: monospace;
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    color: #c9a84c;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  #title-logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    gap: 2px;
+  }
+  #title-logo-line1 {
+    font-family: 'Cinzel', serif;
+    font-size: 2.4rem;
+    color: #e8e0d0;
+    letter-spacing: 6px;
+    text-shadow: 0 0 40px rgba(201,168,76,0.5), 0 2px 8px #000;
+  }
+  #title-logo-line2 {
+    font-family: 'Cinzel', serif;
+    font-size: 4.2rem;
+    font-weight: 700;
+    background: linear-gradient(180deg, #fde68a 0%, #c9a84c 50%, #92702a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 10px;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(201,168,76,0.6));
+  }
+  #title-tagline {
+    font-family: monospace;
+    font-size: 0.68rem;
+    color: #64748b;
+    letter-spacing: 1px;
+    margin-top: -6px;
+  }
+  #title-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+    width: 100%;
+  }
+  .title-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .title-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .title-toggle input { display: none; }
+  .title-toggle-track {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .title-toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #475569;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .title-toggle input:checked + .title-toggle-track {
+    background: rgba(201,168,76,0.2);
+    border-color: #c9a84c;
+  }
+  .title-toggle input:checked + .title-toggle-track .title-toggle-thumb {
+    transform: translateX(16px);
+    background: #c9a84c;
+  }
+  .title-setting-label {
+    font-family: monospace;
+    font-size: 0.68rem;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+  }
+  #btn-title-start {
+    margin-top: 8px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 3px;
+    padding: 14px 36px;
+    background: linear-gradient(135deg, #1a1228 0%, #251840 100%);
+    border: 1px solid #c9a84c;
+    color: #fde68a;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    box-shadow: 0 0 20px rgba(201,168,76,0.15);
+    border-radius: 4px;
+  }
+  #btn-title-start:hover {
+    background: linear-gradient(135deg, #251840 0%, #33205a 100%);
+    box-shadow: 0 0 36px rgba(201,168,76,0.35);
+    transform: translateY(-2px);
+  }
+  #title-hint {
+    font-family: monospace;
+    font-size: 0.6rem;
+    color: #334155;
+    letter-spacing: 2px;
+    animation: title-pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes title-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div id="title-screen">
+  <div id="title-bg"></div>
+  <div id="title-stars"></div>
+  <div id="title-content">
+    <div id="title-eyebrow">A Boss Rush RPG</div>
+    <div id="title-logo">
+      <span id="title-logo-line1">The Tower of</span>
+      <span id="title-logo-line2">Gods</span>
+    </div>
+    <div id="title-tagline">The gods have gone mad. Climb the tower. End it.</div>
+    <div id="title-settings">
+      <div class="title-setting-row">
+        <label class="title-toggle" id="lbl-easier-mode">
+          <input type="checkbox" id="chk-easier-mode">
+          <span class="title-toggle-track"><span class="title-toggle-thumb"></span></span>
+          <span class="title-setting-label">Easier Mode — damage taken reduced by 25%</span>
+        </label>
+      </div>
+    </div>
+    <button id="btn-title-start">⚔ BEGIN YOUR ASCENT</button>
+    <div id="title-hint">SPACE or ENTER to start</div>
+  </div>
+</div>
+
+<div id="cutscene" class="hidden">
+  <div id="cutscene-title">The Tower of Gods</div>
+  <div id="cutscene-text"></div>
+  <button id="btn-begin">ENTER THE TOWER</button>
+  <div id="cutscene-panel-num"></div>
+  <div id="cutscene-hint">click or press space to continue</div>
+</div>
+
+<div id="floor-select" class="hidden">
+  <div id="floor-select-title">Choose Your Trial</div>
+  <div id="floor-select-sub">How many floors will you climb?</div>
+  <div id="floor-select-buttons">
+    <button class="floor-btn" data-floors="5">5 Floors</button>
+    <button class="floor-btn" data-floors="10">10 Floors</button>
+    <button class="floor-btn" data-floors="15">15 Floors</button>
+    <button class="floor-btn" data-floors="20">20 Floors</button>
+  </div>
+  <button id="floor-select-test">⚙ Testing Mode</button>
+</div>
+
+<div id="boss-select" class="hidden">
+  <div id="boss-select-title">Testing Mode</div>
+  <div id="boss-select-sub">Choose a boss to fight directly</div>
+  <div id="boss-select-list"></div>
+  <button id="boss-select-back">← Back</button>
+</div>
+
+<div id="crit-banner">
+  <div id="crit-burst-shape">
+    <div id="crit-text">CRITICAL!<br>HIT</div>
+  </div>
+</div>
+
+<div id="turn-banner">
+  <div id="turn-banner-text"></div>
+  <div id="turn-banner-sub"></div>
+</div>
+
+<div id="battle-screen">
+  <div id="battle-header">
+  <button id="btn-give-up">Give Up</button>
+  <span id="round-display">Floor 1</span>
+</div>
+
+  <div id="enemy-row"></div>
+
+  <div id="battle-log"></div>
+
+  <div id="timing-bar-wrap" class="hidden">
+    <div id="timing-label">⚔️ Press SPACE to attack!</div>
+    <div id="timing-track">
+      <div id="timing-zone-good"></div>
+      <div id="timing-zone-perfect"></div>
+      <div id="timing-cursor"></div>
+    </div>
+    <div id="timing-result"></div>
+  </div>
+
+  <div id="hero-status-row"></div>
+
+  <div id="action-panel">
+    <!-- Main menu -->
+    <div id="menu-main" class="menu">
+      <div class="acting-label" id="acting-label">Choose an action</div>
+      <div class="btn-grid">
+        <button id="btn-attack">⚔️ Attack</button>
+        <button id="btn-magic">🔮 Magic</button>
+        <button id="btn-skill-tree-battle" class="utility-btn">🌿 Skill Tree</button>
+        <button id="btn-combo-ref" class="utility-btn">⚗ Combos</button>
+      </div>
+      <button id="btn-pass">⏭️ Pass Turn</button>
+    </div>
+
+    <!-- Magic submenu -->
+    <div id="menu-magic" class="menu">
+      <button class="back-btn" id="back-from-magic">← Back</button>
+      <div class="submenu-label">Select a Spell</div>
+      <div class="spell-list" id="spell-list"></div>
+    </div>
+
+    <!-- Targeting -->
+    <div id="menu-target" class="menu">
+      <button class="back-btn" id="back-from-target">← Back</button>
+      <div class="submenu-label">Choose a Target</div>
+      <div class="target-list" id="target-list"></div>
+    </div>
+
+    <!-- Enemy turn message -->
+    <div id="menu-enemy" class="menu">
+      <div class="enemy-turn-msg" id="enemy-turn-msg">Enemy is acting...</div>
+    </div>
+  </div>
+</div>
+
+<div id="combo-ref-panel">
+  <button id="combo-ref-close">✕ Close</button>
+  <div id="combo-ref-title">⚗ Magic Combo Effects</div>
+  <div class="combo-row">
+    <span class="combo-trigger">☀️ Sun + ❄️ Frozen</span>
+    <span class="combo-effect"><strong>Melt</strong> — strips freeze, deals +75% bonus fire damage</span>
+  </div>
+  <div class="combo-row">
+    <span class="combo-trigger">🌪️ Wind + 🔥 Burning</span>
+    <span class="combo-effect"><strong>Fan the Flames</strong> — deals 50% bonus fire damage, extends burn by 2 turns</span>
+  </div>
+  <div class="combo-row">
+    <span class="combo-trigger">🌧️ Rain → enemy</span>
+    <span class="combo-effect"><strong>Drench</strong> — applies 💧 Drenched (2 turns); sets up combos below</span>
+  </div>
+  <div class="combo-row">
+    <span class="combo-trigger">🌧️ Rain (you burning)</span>
+    <span class="combo-effect"><strong>Douse</strong> — removes 🔥 Burning from yourself</span>
+  </div>
+  <div class="combo-row">
+    <span class="combo-trigger">❄️ Snow + 💧 Drenched</span>
+    <span class="combo-effect"><strong>Deep Freeze</strong> — strips drench, freezes for 2 turns instead of 1</span>
+  </div>
+  <div class="combo-row">
+    <span class="combo-trigger">⚡ Lightning + 💧 Drenched</span>
+    <span class="combo-effect"><strong>Short Circuit</strong> — strips drench, deals +150% bonus damage</span>
+  </div>
+  <div class="combo-row">
+    <span class="combo-trigger">🌪️ Wind + ❄️ Frozen</span>
+    <span class="combo-effect"><strong>Blizzard</strong> — strips freeze, deals +100% bonus damage, refreezes for 1 turn</span>
+  </div>
+</div>
+
+<div id="skill-tree-modal" class="hidden">
+  <div id="skill-tree-box">
+    <div id="skill-tree-header">
+      <div id="skill-tree-title">🌿 Skill Tree</div>
+      <div id="skill-tree-stars">🌟 <span id="skill-tree-stars-val">0</span> Skill Stars</div>
+      <button id="skill-tree-close">✕ Close</button>
+    </div>
+    <div id="skill-tree-branches"></div>
+  </div>
+</div>
+
+<div id="overlay" class="hidden">
+  <div id="overlay-box">
+    <div id="overlay-title">Victory!</div>
+    <div id="overlay-subtitle">You stand victorious!</div>
+    <div id="level-up-choices" class="hidden">
+      <div class="upgrade-label">Choose your upgrade:</div>
+      <div class="upgrade-grid">
+        <button id="btn-upgrade-atk">⚔️ Power Up<span class="upgrade-desc">+10 Attack</span></button>
+        <button id="btn-upgrade-hp">❤️ Fortify<span class="upgrade-desc">+15 Max HP</span></button>
+        <button id="btn-upgrade-star">🌟 Skill Star<span class="upgrade-desc">+1 star to spend on combo upgrades</span></button>
+      </div>
+      <div id="skill-tree-row">
+        <span id="skill-stars-display">🌟 <span id="skill-stars-val">0</span> Skill Stars</span>
+        <button id="btn-open-skill-tree">🌿 Skill Tree</button>
+      </div>
+    </div>
+    <button id="btn-restart" style="margin-top:16px">Restart</button>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+
+const SPELLS = {
+  Sun:       { type: "hybrid",        target: "single", fx: "☀️",  healPct: 0.10, cooldown: 3 },
+  Rain:      { type: "hybrid",        target: "single", fx: "🌧️", healPct: 0.10, cooldown: 3 },
+  Snow:      { type: "damage_status", target: "single", fx: "❄️",  effect: "frozen",       effectDuration: 1, cooldown: 3 },
+  Lightning: { type: "damage_status", target: "single", fx: "⚡",  effect: "electrocuted", effectDuration: 3, cooldown: 3 },
+  Wind:      { type: "damage_status", target: "single", fx: "🌪️", effect: "confused",     effectDuration: 2, cooldown: 3 },
+};
+
+// Each attack pattern defines timing zone positions, bar speed, and damage multiplier.
+// hits > 1 means the player must press SPACE that many times in sequence.
+// Gold zone = perfect block (0 dmg), green = good block (55% dmg), else weak (90% dmg).
+const ATTACK_PATTERNS = {
+  // ── Single-hit special behaviors ──────────────────────────────────────────
+  strike: {
+    announce: "attacks!",
+    label: "🛡️ Press SPACE to block!",
+    dmgMult: 1.0, duration: 1200, hits: 1,
+    gold: [0.855, 0.90], green: [0.775, 0.855],
+    behavior: "linear",
+  },
+  feint: {
+    announce: "feints — then STRIKES!",
+    label: "⚠️ Feint — watch for the jump!",
+    dmgMult: 1.15, duration: 1400, hits: 1,
+    gold: [0.855, 0.90], green: [0.775, 0.855],
+    behavior: "feint",
+  },
+  bounce: {
+    announce: "swings... and REBOUNDS!",
+    label: "↩️ Bounce — two chances!",
+    dmgMult: 1.2, duration: 2000, hits: 1,
+    gold: [0.855, 0.90], green: [0.775, 0.855],
+    behavior: "bounce",
+  },
+  // ── Multi-hit patterns ─────────────────────────────────────────────────────
+  twin: {
+    announce: "strikes TWICE!",
+    label: "🛡️ Block! (HIT {n}/{total})",
+    dmgMult: 1.3, duration: 1100, hits: 2,
+    gold: [0.855, 0.90], green: [0.775, 0.855],
+    behavior: "linear",
+  },
+  triple: {
+    announce: "unleashes a TRIPLE ASSAULT!",
+    label: "🛡️ Block! (HIT {n}/{total})",
+    dmgMult: 1.65, duration: 950, hits: 3,
+    gold: [0.855, 0.90], green: [0.775, 0.855],
+    behavior: "linear",
+  },
+  barrage: {
+    announce: "erupts into a BARRAGE!",
+    label: "🛡️ Block! (HIT {n}/{total})",
+    dmgMult: 2.1, duration: 750, hits: 4,
+    gold: [0.855, 0.90], green: [0.775, 0.855],
+    behavior: "linear",
+  },
+};
+
+function pickWeightedAttack(attacks) {
+  let r = Math.random() * attacks.reduce((s, [, w]) => s + w, 0);
+  for (const [name, w] of attacks) { r -= w; if (r <= 0) return name; }
+  return attacks[0][0];
+}
+
+const HERO_TEMPLATES = [
+  { id: "hero", name: "Hero", type: "hero", sprite: "🔆",
+    hp: 50, maxHp: 50,
+    stats: { atk: 20, def: 24, mag: 40, spd: 28, lck: 15 },
+    spells: ["Sun", "Rain", "Snow", "Lightning", "Wind"], spellCooldowns: {}, statusEffects: {}, alive: true },
+];
+
+// Boss Rush — five elemental gods cycling with escalating names each cycle
+const BOSS_POOL = [
+  { id: "sungod",    baseName: "Sun Goddess",    type: "enemy", sprite: "☀️",
+    hp: 130, maxHp: 130, stats: { atk: 20, def: 10, spd: 28 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "sungoddess",
+    title: "She Once Gave Life to All", resistance: "Sun",
+    attacks: [["twin", 0.45], ["triple", 0.35], ["strike", 0.20]] },
+
+  { id: "windgod",   baseName: "Wind God",       type: "enemy", sprite: "🌪️",
+    hp: 110, maxHp: 110, stats: { atk: 22, def: 6,  spd: 44 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "windgod",
+    title: "His Gentle Breeze Now Tears the Sky", resistance: "Wind",
+    attacks: [["feint", 0.45], ["barrage", 0.30], ["twin", 0.25]] },
+
+  { id: "raingod",   baseName: "Rain God",       type: "enemy", sprite: "🌧️",
+    hp: 170, maxHp: 170, stats: { atk: 18, def: 14, spd: 20 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "raingod",
+    title: "What Once Nourished Now Drowns", resistance: "Rain",
+    attacks: [["twin", 0.40], ["strike", 0.35], ["triple", 0.25]] },
+
+  { id: "snowgod",   baseName: "Snow Goddess",   type: "enemy", sprite: "❄️",
+    hp: 150, maxHp: 150, stats: { atk: 24, def: 10, spd: 22 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "snowgoddess",
+    title: "Her Embrace Has Gone Cold Forever", resistance: "Snow",
+    attacks: [["bounce", 0.40], ["twin", 0.30], ["strike", 0.30]] },
+
+  { id: "lightgod",  baseName: "Lightning God",  type: "enemy", sprite: "⚡",
+    hp: 160, maxHp: 160, stats: { atk: 30, def: 8,  spd: 40 },
+    spells: [], statusEffects: {}, alive: true, aiProfile: "lightninggod",
+    title: "Judgment Without Mercy or End", resistance: "Lightning",
+    attacks: [["barrage", 0.50], ["triple", 0.30], ["twin", 0.20]] },
+];
+
+// Final boss — scales with the chosen floor count
+const LUNA_BOSS = {
+  id: "luna", name: "Luna", baseName: "Luna", type: "enemy", sprite: "🌙",
+  hp: 525, maxHp: 525, stats: { atk: 38, def: 16, spd: 32 },
+  spells: [], statusEffects: {}, alive: true, aiProfile: "luna",
+  title: "She Who Turned the Gods Against the World",
+  attacks: [["barrage", 0.25], ["triple", 0.25], ["twin", 0.20], ["feint", 0.20], ["bounce", 0.10]],
+};
+
+const CYCLE_PREFIXES = ["Crazed", "Distorted", "Dark", "Corrupt"];
+
+// ─── SKILL TREE ───────────────────────────────────────────────────────────────
+const SKILL_TREE = [
+  // ── Melt (Sun + Frozen) ──
+  { key: "solar_flare",     name: "Solar Flare",     combo: "melt",          tier: 1, requires: null,             cost: 1,
+    desc: "Melt deals 125% bonus damage instead of 75%" },
+  { key: "scorching_light", name: "Scorching Light", combo: "melt",          tier: 2, requires: "solar_flare",    cost: 2,
+    desc: "Melt also ignites the target (🔥 Burning, 3 turns)" },
+
+  // ── Fan the Flames (Wind + Burning) ──
+  { key: "gale_force",      name: "Gale Force",      combo: "fan_flames",    tier: 1, requires: null,             cost: 1,
+    desc: "Fan the Flames deals 100% bonus damage instead of 50%" },
+  { key: "windshear",       name: "Firestorm",        combo: "fan_flames",    tier: 2, requires: "gale_force",     cost: 2,
+    desc: "Fan the Flames extends burning by 4 extra turns instead of 2" },
+
+  // ── Blizzard (Wind + Frozen) ──
+  { key: "blizzard_force",  name: "Blizzard Force",  combo: "blizzard",      tier: 1, requires: null,             cost: 1,
+    desc: "Blizzard deals 150% bonus damage instead of 100%" },
+  { key: "arctic_gale",     name: "Arctic Gale",     combo: "blizzard",      tier: 2, requires: "blizzard_force", cost: 2,
+    desc: "Blizzard refreezes the target for 2 turns instead of 1" },
+
+  // ── Deep Freeze (Snow + Drenched) ──
+  { key: "glacial_burst",   name: "Glacial Burst",   combo: "deep_freeze",   tier: 1, requires: null,             cost: 1,
+    desc: "Deep Freeze shatters the ice for 75% bonus magic damage" },
+  { key: "permafrost",      name: "Permafrost",       combo: "deep_freeze",   tier: 2, requires: "glacial_burst",  cost: 2,
+    desc: "Deep Freeze lasts 3 turns instead of 2" },
+
+  // ── Short Circuit (Lightning + Drenched) ──
+  { key: "overcharge",      name: "Overcharge",       combo: "short_circuit", tier: 1, requires: null,             cost: 1,
+    desc: "Short Circuit deals 225% bonus damage instead of 150%" },
+  { key: "chain_lightning", name: "Chain Lightning",  combo: "short_circuit", tier: 2, requires: "overcharge",     cost: 2,
+    desc: "Short Circuit fires a second hit for 50% bonus damage" },
+];
+
+function spawnBoss(floor) {
+  const poolSize  = BOSS_POOL.length; // 5
+  const bossIndex = (floor - 1) % poolSize;
+  const cycle     = Math.floor((floor - 1) / poolSize);
+  const prefix    = CYCLE_PREFIXES[Math.min(cycle, CYCLE_PREFIXES.length - 1)];
+  const base = deepClone(BOSS_POOL[bossIndex]);
+  base.name = `${prefix} ${base.baseName}`;
+  const hpScale  = Math.pow(1.30, floor - 1);
+  const atkScale = Math.pow(1.25, floor - 1);
+  base.maxHp = base.hp = Math.floor(base.maxHp * hpScale);
+  base.stats.atk = Math.floor(base.stats.atk * atkScale);
+  return base;
+}
+
+function spawnLuna() {
+  const base = deepClone(LUNA_BOSS);
+  // Scale to match the chosen difficulty (floor count)
+  const hpScale  = Math.pow(1.25, STATE.maxFloors - 1);
+  const atkScale = Math.pow(1.20, STATE.maxFloors - 1);
+  base.maxHp = base.hp = Math.floor(base.maxHp * hpScale);
+  base.stats.atk = Math.floor(base.stats.atk * atkScale);
+  return base;
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+const STATE = {
+  phase: "player_turn",
+  heroes: [],
+  enemies: [],
+  turnQueue: [],
+  currentActorIndex: 0,
+  activeActor: null,
+  pendingAction: null,
+  targetingGroup: null,
+  prevMenu: "main",
+  log: [],
+  round: 1,
+  floor: 1,
+  heroLevel: 1,
+  quickCast: false,
+  blockMultiplier: 1.0,
+  maxFloors: 5,
+  lunaFight: false,
+  testMode: false,
+  testAtkBonus: 0,
+  testHpBonus: 0,
+  testSkillStars: 0,
+  skillStars: 0,
+  skills: {},
+  easierMode: false,
+};
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+
+function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+function pickRandom(arr, n) {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n);
+}
+
+function livingHeroes()  { return STATE.heroes.filter(u => u.alive); }
+function livingEnemies() { return STATE.enemies.filter(u => u.alive); }
+
+function statusIcons(se) {
+  const icons = { frozen: "❄️", electrocuted: "⚡", confused: "🌪️", drenched: "💧", burning: "🔥", stunned: "😵" };
+  return Object.entries(se || {}).filter(([,v]) => v > 0).map(([k]) => icons[k] || "").join("");
+}
+
+// ─── DAMAGE ──────────────────────────────────────────────────────────────────
+
+function calcPhysical(attacker, defender) {
+  const base = attacker.stats.atk * 2 - defender.stats.def;
+  const variance = 0.85 + Math.random() * 0.30;
+  const isCrit = Math.random() < 0.10;
+  const dmg = Math.max(1, Math.floor(base * variance * (isCrit ? 1.15 : 1)));
+  return { dmg, isCrit };
+}
+
+function calcEnemyPhysical(attacker, defender) {
+  const roll = Math.random();
+  if (roll < 0.10) return { dmg: 0, outcome: "miss" };
+
+  let mult, outcome;
+  if      (roll < 0.30) { mult = 0.60; outcome = "glancing";  }
+  else if (roll < 0.85) { mult = 1.00; outcome = "normal";    }
+  else                  { mult = 1.15; outcome = "critical";   }
+
+  const base = Math.max(0, attacker.stats.atk * 2 - defender.stats.def);
+  const variance = 0.85 + Math.random() * 0.30;
+  const dmg = Math.max(1, Math.floor(base * variance * mult));
+  return { dmg, outcome };
+}
+
+function calcMagic(caster) {
+  // ~10% more than a basic physical attack (ignores enemy defense)
+  const base = caster.stats.atk * 1.1;
+  const variance = 0.90 + Math.random() * 0.20;
+  return Math.max(1, Math.floor(base * variance));
+}
+
+// ─── LOG ─────────────────────────────────────────────────────────────────────
+
+function addLog(text, type = "system") {
+  STATE.log.unshift({ text, type });
+  if (STATE.log.length > 30) STATE.log.pop();
+}
+
+// ─── TURN QUEUE ──────────────────────────────────────────────────────────────
+
+function buildTurnQueue() {
+  // Hero always goes first, then enemies sorted by speed
+  const enemies = livingEnemies().sort((a, b) => b.stats.spd - a.stats.spd);
+  STATE.turnQueue = [...livingHeroes(), ...enemies];
+  STATE.currentActorIndex = 0;
+}
+
+function advanceTurn() {
+  if (STATE.phase === "battle_over") return;
+
+  STATE.currentActorIndex++;
+
+  // Rebuild queue if exhausted
+  if (STATE.currentActorIndex >= STATE.turnQueue.length) {
+    STATE.round++;
+    buildTurnQueue();
+  }
+
+  // Skip dead units
+  let safety = 0;
+  while (STATE.turnQueue[STATE.currentActorIndex] &&
+         !STATE.turnQueue[STATE.currentActorIndex].alive) {
+    STATE.currentActorIndex++;
+    if (STATE.currentActorIndex >= STATE.turnQueue.length) {
+      STATE.round++;
+      buildTurnQueue();
+    }
+    if (++safety > 20) break;
+  }
+
+  const actor = STATE.turnQueue[STATE.currentActorIndex];
+  if (!actor) return;
+
+  STATE.activeActor = actor;
+
+  // Tick spell cooldowns at the start of each hero turn
+  if (actor.type === "hero") {
+    Object.keys(actor.spellCooldowns).forEach(k => {
+      actor.spellCooldowns[k] = Math.max(0, (actor.spellCooldowns[k] || 0) - 1);
+    });
+  }
+
+  // Tick status effects before this unit's turn
+  tickStatus(actor);
+  if (checkBattleOver()) return;
+
+  // Frozen: skip this unit's turn
+  if (checkAndClearFrozen(actor)) {
+    render();
+    setTimeout(advanceTurn, 800);
+    return;
+  }
+
+  STATE.phase = actor.type === "hero" ? "player_turn" : "enemy_turn";
+  document.getElementById("round-display").textContent = `Floor ${STATE.floor}`;
+
+  if (actor.type === "hero") {
+    showTurnBanner(`${actor.sprite} Your Turn`, actor.name);
+  } else {
+    showTurnBanner(`${actor.sprite} Enemy Turn`, actor.name);
+  }
+
+  render();
+
+  if (STATE.phase === "enemy_turn") {
+    setTimeout(runEnemyTurn, 900);
+  }
+}
+
+function tickStatus(unit) {
+  if (!unit.alive) return;
+  const se = unit.statusEffects;
+
+  // Electrocuted: 10% max HP damage per turn
+  if (se.electrocuted > 0) {
+    const easierMult = (STATE.easierMode && unit.type === "hero") ? 0.75 : 1.0;
+    const dmg = Math.max(1, Math.floor(unit.maxHp * 0.10 * easierMult));
+    unit.hp = Math.max(0, unit.hp - dmg);
+    if (unit.hp === 0) unit.alive = false;
+    se.electrocuted--;
+    addLog(`⚡ ${unit.name} takes ${dmg} electrocution damage! (${se.electrocuted} left)`, "status");
+  }
+
+  // Burning: 8% max HP damage per turn
+  if (se.burning > 0) {
+    const easierMult = (STATE.easierMode && unit.type === "hero") ? 0.75 : 1.0;
+    const dmg = Math.max(1, Math.floor(unit.maxHp * 0.08 * easierMult));
+    unit.hp = Math.max(0, unit.hp - dmg);
+    if (unit.hp === 0) unit.alive = false;
+    se.burning--;
+    addLog(`🔥 ${unit.name} takes ${dmg} burn damage! (${se.burning} left)`, "status");
+  }
+
+  // Decrement other durations
+  if (se.confused > 0) se.confused--;
+  if (se.drenched > 0) se.drenched--;
+}
+
+// Returns true if the unit is frozen or stunned and should skip their turn
+function checkAndClearFrozen(unit) {
+  if (unit.statusEffects.stunned > 0) {
+    unit.statusEffects.stunned--;
+    addLog(`😵 ${unit.name} is stunned and cannot act!`, "status");
+    return true;
+  }
+  if (unit.statusEffects.frozen > 0) {
+    unit.statusEffects.frozen--;
+    addLog(`❄️ ${unit.name} is frozen and cannot act!`, "status");
+    return true;
+  }
+  return false;
+}
+
+// Combo damage helper — applies Combo Power skill multiplier
+function comboDmg(actor, mult) {
+  return Math.max(1, Math.floor(calcMagic(actor) * mult));
+}
+
+// ─── RESOLVE ACTION ──────────────────────────────────────────────────────────
+
+function resolveAction(actor, action, timingMultiplier = 1.0) {
+  switch (action.type) {
+    case "attack": {
+      if (actor.type === "hero") {
+        const { dmg: rawDmg, isCrit } = calcPhysical(actor, action.target);
+        const dmg = Math.max(1, Math.floor(rawDmg * timingMultiplier));
+        action.target.hp = Math.max(0, action.target.hp - dmg);
+        if (action.target.hp === 0) action.target.alive = false;
+        const critStr = isCrit ? " ✦ Critical!" : "";
+        const timingStr = timingMultiplier === 1.0 ? "" : timingMultiplier === 0.75 ? " [Good]" : " [Miss]";
+        addLog(`${actor.sprite} ${actor.name} attacks ${action.target.name} for ${dmg} damage!${critStr}${timingStr}`,
+               isCrit ? "crit" : "attack");
+        animateHit(action.target.id);
+        if (isCrit) showCritBanner();
+      } else {
+        const { dmg: baseRaw, outcome } = calcEnemyPhysical(actor, action.target);
+        const patternMult = action.patternDmgMult || 1.0;
+        const rawDmg = Math.floor(baseRaw * patternMult);
+        if (outcome === "miss") {
+          addLog(`${actor.sprite} ${actor.name} attacks ${action.target.name}... Miss!`, "system");
+        } else {
+          const blocked = STATE.blockMultiplier < 1.0;
+          const easierMult = STATE.easierMode ? 0.75 : 1.0;
+          const dmg = Math.max(0, Math.floor(rawDmg * STATE.blockMultiplier * easierMult));
+          STATE.blockMultiplier = 1.0;
+          action.target.hp = Math.max(0, action.target.hp - dmg);
+          if (action.target.hp === 0) action.target.alive = false;
+          const outcomeStr = outcome === "glancing" ? " (Glancing)" : outcome === "critical" ? " ✦ Critical!" : "";
+          const blockStr = blocked ? ` 🛡️ Blocked!` : "";
+          addLog(`${actor.sprite} ${actor.name} attacks ${action.target.name} for ${dmg} damage!${outcomeStr}${blockStr}`,
+                 outcome === "critical" ? "crit" : "attack");
+          animateHit(action.target.id);
+        }
+      }
+      break;
+    }
+    case "magic": {
+      const spell = SPELLS[action.spellKey];
+      const timingStr = timingMultiplier === 1.0 ? "" : timingMultiplier === 0.75 ? " [Good]" : " [Miss]";
+
+      if (spell.type === "hybrid") {
+        // Damage enemy + heal self
+        const resistant = action.target.resistance === action.spellKey;
+        const resMult = resistant ? 0.35 : 1.0;
+        const dmg = Math.max(1, Math.floor(calcMagic(actor) * timingMultiplier * resMult));
+        action.target.hp = Math.max(0, action.target.hp - dmg);
+        if (action.target.hp === 0) action.target.alive = false;
+        const resStr = resistant ? " (Resisted!)" : "";
+        addLog(`${spell.fx} ${actor.name} casts ${action.spellKey} on ${action.target.name} for ${dmg} damage!${timingStr}${resStr}`, "magic");
+        animateHit(action.target.id);
+        const healAmt = Math.floor(actor.maxHp * spell.healPct);
+        const oldHp = actor.hp;
+        actor.hp = Math.min(actor.maxHp, actor.hp + healAmt);
+        addLog(`${spell.fx} ${actor.name} recovers ${actor.hp - oldHp} HP!`, "heal");
+        showSpellFx(spell.fx);
+      } else if (spell.type === "damage_status") {
+        const target = action.target;
+        const resistant = target.resistance === action.spellKey;
+        const resMult = resistant ? 0.35 : 1.0;
+        // Deal damage with timing
+        const dmg = Math.max(1, Math.floor(calcMagic(actor) * timingMultiplier * resMult));
+        target.hp = Math.max(0, target.hp - dmg);
+        if (target.hp === 0) target.alive = false;
+        const resStr = resistant ? " (Resisted!)" : "";
+        addLog(`${spell.fx} ${actor.name} casts ${action.spellKey} on ${target.name} for ${dmg} damage!${timingStr}${resStr}`, "magic");
+        animateHit(target.id);
+        showSpellFx(spell.fx);
+        // Apply status effect if target survived and not resistant
+        if (target.alive && !resistant) {
+          const effect = spell.effect;
+          if ((target.statusEffects[effect] || 0) > 0) {
+            addLog(`${target.name} is already ${effect}!`, "system");
+          } else {
+            target.statusEffects[effect] = spell.effectDuration;
+            const effectLabel = { frozen: "frozen", electrocuted: "electrocuted", confused: "confused" }[effect] || effect;
+            addLog(`${spell.fx} ${target.name} is ${effectLabel}!`, "status");
+          }
+        }
+      }
+
+      // ── Contextual spell interactions ──────────────────────────────────────
+      if (action.target) {
+        const target = action.target;
+        const tse = target.statusEffects;
+        const ase = actor.statusEffects || {};
+
+        if (action.spellKey === "Sun" && target.alive) {
+          // Sun melts frozen targets — Solar Flare upgrades bonus to 125%
+          if ((tse.frozen || 0) > 0) {
+            const meltMult = STATE.skills.solar_flare ? 1.25 : 0.75;
+            const bonusDmg = comboDmg(actor, meltMult);
+            tse.frozen = 0;
+            target.hp = Math.max(0, target.hp - bonusDmg);
+            if (target.hp === 0) target.alive = false;
+            addLog(`☀️ The heat melts the ice! ${target.name} takes ${bonusDmg} bonus fire damage!`, "magic");
+            // Scorching Light: melt also ignites
+            if (STATE.skills.scorching_light && target.alive && !(tse.burning > 0)) {
+              tse.burning = lingerDur(3);
+              addLog(`☀️ The scorching light sets ${target.name} ablaze! (🔥 Burning, ${tse.burning} turns)`, "status");
+            }
+          }
+        }
+
+        if (action.spellKey === "Wind" && target.alive) {
+          // Wind + Burning → Fan the Flames
+          // Gale Force upgrades bonus 50%→100%; Firestorm extends burn by 4 instead of 2
+          if ((tse.burning || 0) > 0) {
+            const bonusMult  = STATE.skills.gale_force ? 1.0 : 0.5;
+            const burnExtend = lingerDur(STATE.skills.windshear ? 4 : 2);
+            const bonusDmg   = comboDmg(actor, bonusMult);
+            tse.burning += burnExtend;
+            target.hp = Math.max(0, target.hp - bonusDmg);
+            if (target.hp === 0) target.alive = false;
+            addLog(`🌪️ The winds fan the flames! ${target.name} takes ${bonusDmg} bonus fire damage and burns ${burnExtend} more turns!`, "magic");
+            animateHit(target.id);
+          }
+          // Wind + Frozen → Blizzard
+          if (target.alive && (tse.frozen || 0) > 0) {
+            const blizzardMult = STATE.skills.blizzard_force ? 1.5 : 1.0;
+            const blizzardDmg  = comboDmg(actor, blizzardMult);
+            const refreeze     = lingerDur(STATE.skills.arctic_gale ? 2 : 1);
+            tse.frozen = 0;
+            target.hp = Math.max(0, target.hp - blizzardDmg);
+            if (target.hp === 0) target.alive = false;
+            tse.frozen = refreeze;
+            addLog(`🌨️ Blizzard! Wind and ice collide — ${target.name} takes ${blizzardDmg} bonus damage and is refrozen for ${refreeze} turn${refreeze > 1 ? "s" : ""}!`, "magic");
+            animateHit(target.id);
+          }
+        }
+
+        if (action.spellKey === "Rain") {
+          // Rain drenches the target
+          if (target.alive && (tse.drenched || 0) === 0) {
+            tse.drenched = 2;
+            addLog(`🌧️ ${target.name} is drenched!`, "status");
+          }
+          // Rain douses burning on the caster
+          if ((ase.burning || 0) > 0) {
+            ase.burning = 0;
+            addLog(`🌧️ The rain douses the flames on ${actor.name}!`, "status");
+          }
+        }
+
+        if (action.spellKey === "Snow" && target.alive) {
+          // Snow deep-freezes drenched targets — Permafrost upgrades to 3 turns
+          if ((tse.drenched || 0) > 0) {
+            const deepFreezeDur = STATE.skills.permafrost ? 3 : 2;
+            tse.drenched = 0;
+            tse.frozen = Math.max(tse.frozen || 0, deepFreezeDur);
+            // Glacial Burst: shatters the ice for bonus damage
+            if (STATE.skills.glacial_burst) {
+              const bonusDmg = comboDmg(actor, 0.75);
+              target.hp = Math.max(0, target.hp - bonusDmg);
+              if (target.hp === 0) target.alive = false;
+              addLog(`❄️ Glacial Burst! The ice shatters for ${bonusDmg} bonus damage!`, "magic");
+              animateHit(target.id);
+            }
+            addLog(`❄️ The water flash-freezes! ${target.name} is deep-frozen for ${deepFreezeDur} turns!`, "status");
+          }
+        }
+
+        if (action.spellKey === "Lightning" && target.alive) {
+          // Short Circuit — Overcharge upgrades bonus to 225%
+          if ((tse.drenched || 0) > 0) {
+            const scMult   = STATE.skills.overcharge ? 2.25 : 1.5;
+            const bonusDmg = comboDmg(actor, scMult);
+            tse.drenched = 0;
+            target.hp = Math.max(0, target.hp - bonusDmg);
+            if (target.hp === 0) target.alive = false;
+            addLog(`⚡ Short circuit! The water conducts the lightning — ${target.name} takes ${bonusDmg} bonus damage!`, "magic");
+            animateHit(target.id);
+            // Chain Lightning: second hit at 50%
+            if (STATE.skills.chain_lightning && target.alive) {
+              const chainDmg = comboDmg(actor, 0.5);
+              target.hp = Math.max(0, target.hp - chainDmg);
+              if (target.hp === 0) target.alive = false;
+              addLog(`⚡ Chain Lightning arcs back for ${chainDmg} more damage!`, "magic");
+              animateHit(target.id);
+            }
+          }
+        }
+      }
+      // Set hero spell cooldown (quickCast reduces it to 1 for this floor)
+      if (actor.spellCooldowns !== undefined) {
+        actor.spellCooldowns[action.spellKey] = STATE.quickCast ? 2 : (spell.cooldown || 3);
+      }
+      break;
+    }
+    case "run": {
+      const success = Math.random() < 0.70;
+      if (success) {
+        addLog("🏃 The party fled from battle!", "system");
+        endBattle("fled");
+        return;
+      } else {
+        addLog("🚫 Couldn't escape!", "system");
+      }
+      break;
+    }
+  }
+}
+
+// ─── TIMING BAR ──────────────────────────────────────────────────────────────
+
+function showCritBanner() {
+  const el = document.getElementById("crit-banner");
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 1300);
+}
+
+function showTurnBanner(mainText, subText = "") {
+  const banner = document.getElementById("turn-banner");
+  document.getElementById("turn-banner-text").textContent = mainText;
+  document.getElementById("turn-banner-sub").textContent  = subText;
+  // Restart the animation
+  banner.classList.remove("animating");
+  void banner.offsetWidth; // force reflow
+  banner.classList.add("animating");
+}
+
+let timingActive      = false;
+let timingRafId       = null;
+let timingCallback    = null;
+let timingAutoTimeout = null;
+let timingMode        = "attack";
+let timingDuration    = 1200;
+let timingStart       = null;
+let activeDefendZones = { gold: [0.7875, 0.8325], green: [0.5825, 0.6375] };
+let activeBehavior    = "linear";
+
+// Multi-hit state
+let mhTotal   = 0;   // total hits required (0 = single-hit mode)
+let mhCurrent = 0;   // which hit we're on (1-based)
+let mhAccum   = [];  // accumulated block multipliers
+let mhPatKey  = null;
+
+
+function defendCursorPos(t) {
+  if (activeBehavior === "bounce") {
+    if (t < 0.45) return (t / 0.45) * 0.72;
+    if (t < 0.62) return 0.72 - ((t - 0.45) / 0.17) * 0.50;
+    return 0.22 + ((t - 0.62) / 0.38) * 0.78;
+  }
+  if (activeBehavior === "feint") {
+    if (t < 0.42) return (t / 0.42) * 0.30;
+    if (t < 0.52) return 0.30 + ((t - 0.42) / 0.10) * 0.30;
+    return 0.60 + ((t - 0.52) / 0.48) * 0.40;
+  }
+  return t;
+}
+
+function timingAnimate(timestamp) {
+  if (!timingActive) return;
+  if (!timingStart) timingStart = timestamp;
+  const elapsed = timestamp - timingStart;
+  const cursor  = document.getElementById("timing-cursor");
+  let pos;
+  if (timingMode === "defend") {
+    const t = Math.min(elapsed / timingDuration, 1.0);
+    pos = defendCursorPos(t);
+    cursor.style.left = (pos * 100) + "%";
+    if (t >= 1.0) { completeTiming(pos); return; }
+  } else {
+    const cycle = (elapsed % (timingDuration * 2)) / timingDuration;
+    pos = cycle <= 1 ? cycle : 2 - cycle;
+    cursor.style.left = (pos * 100) + "%";
+  }
+  timingRafId = requestAnimationFrame(timingAnimate);
+}
+
+function applyDefendZones(pat) {
+  const [g0, g1] = pat.gold;
+  const [n0, n1] = pat.green;
+  document.getElementById("timing-zone-perfect").style.left  = (g0 * 100) + "%";
+  document.getElementById("timing-zone-perfect").style.width = ((g1 - g0) * 100) + "%";
+  document.getElementById("timing-zone-good").style.left     = (n0 * 100) + "%";
+  document.getElementById("timing-zone-good").style.width    = ((n1 - n0) * 100) + "%";
+  activeDefendZones = { gold: pat.gold, green: pat.green };
+  activeBehavior    = pat.behavior || "linear";
+  timingDuration    = pat.duration;
+}
+
+function setDefendLabel(pat, hitNum, total) {
+  const labelEl = document.getElementById("timing-label");
+  if (total > 1) {
+    labelEl.textContent = pat.label.replace("{n}", hitNum).replace("{total}", total);
+  } else {
+    labelEl.textContent = pat.label;
+  }
+}
+
+function startTimingBar(callback, mode = "attack", patternKey = null) {
+  timingCallback = callback;
+  timingMode     = mode;
+  timingActive   = true;
+  timingStart    = null;
+
+  const wrap    = document.getElementById("timing-bar-wrap");
+  const resultEl = document.getElementById("timing-result");
+  wrap.classList.remove("hidden");
+  resultEl.textContent = "";
+  resultEl.className   = "";
+  document.getElementById("timing-cursor").style.left = "0%";
+
+  if (mode === "defend") {
+    const pat = ATTACK_PATTERNS[patternKey] || ATTACK_PATTERNS.strike;
+    applyDefendZones(pat);
+    const hits = pat.hits || 1;
+    if (hits > 1 && mhTotal === 0) {
+      // Fresh multi-hit sequence
+      mhTotal = hits; mhCurrent = 1; mhAccum = []; mhPatKey = patternKey;
+    }
+    setDefendLabel(pat, mhTotal > 0 ? mhCurrent : 1, mhTotal || 1);
+  } else {
+    timingDuration = 1200;
+    document.getElementById("timing-zone-perfect").style.left  = "46%";
+    document.getElementById("timing-zone-perfect").style.width = "8%";
+    document.getElementById("timing-zone-good").style.left     = "39%";
+    document.getElementById("timing-zone-good").style.width    = "22%";
+    document.getElementById("timing-label").textContent = "⚔️ Press SPACE to attack!";
+    timingAutoTimeout = setTimeout(() => {
+      if (timingActive) completeTiming(0); // auto-miss after 3s
+    }, 3000);
+  }
+
+  timingRafId = requestAnimationFrame(timingAnimate);
+}
+
+function completeTiming(pos) {
+  if (!timingActive) return;
+  timingActive = false;
+  cancelAnimationFrame(timingRafId);
+  clearTimeout(timingAutoTimeout);
+
+  const resultEl = document.getElementById("timing-result");
+  let multiplier, label, cls;
+
+  if (timingMode === "defend") {
+    const [g0, g1] = activeDefendZones.gold;
+    const [n0, n1] = activeDefendZones.green;
+    if (pos >= g0 && pos <= g1) {
+      multiplier = 0.00; label = "✦ Perfect Block!"; cls = "timing-perfect";
+    } else if (pos >= n0 && pos < g0) {
+      multiplier = 0.55; label = "Blocked";           cls = "timing-good";
+    } else {
+      multiplier = 0.90; label = "Weak Block";        cls = "timing-miss";
+    }
+  } else {
+    if (pos >= 0.46 && pos <= 0.54) {
+      multiplier = 1.0;  label = "✦ Perfect!"; cls = "timing-perfect";
+    } else if (pos >= 0.39 && pos <= 0.61) {
+      multiplier = 0.75; label = "Good";       cls = "timing-good";
+    } else {
+      multiplier = 0.40; label = "Miss";       cls = "timing-miss";
+    }
+  }
+
+  resultEl.textContent = label;
+  resultEl.className   = cls;
+
+  setTimeout(() => {
+    if (mhTotal > 0 && timingMode === "defend") {
+      mhAccum.push(multiplier);
+      if (mhAccum.length < mhTotal) {
+        // Chain next hit in the sequence
+        mhCurrent++;
+        const pat = ATTACK_PATTERNS[mhPatKey] || ATTACK_PATTERNS.strike;
+        resultEl.textContent = ""; resultEl.className = "";
+        document.getElementById("timing-cursor").style.left = "0%";
+        setDefendLabel(pat, mhCurrent, mhTotal);
+        timingActive = true; timingStart = null;
+        timingRafId = requestAnimationFrame(timingAnimate);
+      } else {
+        // All hits done — average the block multipliers
+        document.getElementById("timing-bar-wrap").classList.add("hidden");
+        const avg = mhAccum.reduce((s, m) => s + m, 0) / mhAccum.length;
+        mhTotal = 0; mhCurrent = 0; mhAccum = []; mhPatKey = null;
+        timingCallback(avg);
+      }
+    } else {
+      document.getElementById("timing-bar-wrap").classList.add("hidden");
+      timingCallback(multiplier);
+    }
+  }, 500);
+}
+
+function executeAction(actor, action) {
+  const isOffensiveMagic = action.type === "magic" &&
+    ["hybrid", "damage_status"].includes(SPELLS[action.spellKey]?.type);
+  const needsTiming = actor.type === "hero" && (action.type === "attack" || isOffensiveMagic);
+  if (needsTiming) {
+    startTimingBar((multiplier) => {
+      resolveAction(actor, action, multiplier);
+      if (!checkBattleOver()) { render(); setTimeout(advanceTurn, 500); }
+    });
+  } else {
+    resolveAction(actor, action);
+    if (!checkBattleOver()) { render(); setTimeout(advanceTurn, 500); }
+  }
+}
+
+// ─── ENEMY AI ────────────────────────────────────────────────────────────────
+
+const AI_PROFILES = {
+  _attack(enemy) {
+    const patternKey = pickWeightedAttack(enemy.attacks || [["strike", 1]]);
+    const pattern    = ATTACK_PATTERNS[patternKey];
+    return { type: "attack", target: livingHeroes()[0], patternKey, patternDmgMult: pattern.dmgMult };
+  },
+  aggressive(enemy)   { return AI_PROFILES._attack(enemy); },
+  sungoddess(enemy) {
+    if (Math.random() < 0.25) return { type: "self_heal" };
+    return AI_PROFILES._attack(enemy);
+  },
+  windgod(enemy)      { return AI_PROFILES._attack(enemy); },
+  raingod(enemy)      { return AI_PROFILES._attack(enemy); },
+  snowgoddess(enemy)  { return AI_PROFILES._attack(enemy); },
+  lightninggod(enemy) { return AI_PROFILES._attack(enemy); },
+  wraith(enemy)       { return AI_PROFILES._attack(enemy); },
+  ashdrake(enemy)     { return AI_PROFILES._attack(enemy); },
+  luna(enemy) {
+    // 20% chance to self-heal; otherwise attack
+    if (Math.random() < 0.20) return { type: "self_heal" };
+    return AI_PROFILES._attack(enemy);
+  },
+};
+
+function runEnemyTurn() {
+  if (STATE.phase === "battle_over") return;
+  const enemy = STATE.activeActor;
+  if (!enemy || !enemy.alive) { advanceTurn(); return; }
+
+  document.getElementById("enemy-turn-msg").textContent =
+    `${enemy.sprite} ${enemy.name} is acting...`;
+
+  // Confused: 50% chance to miss their turn
+  if ((enemy.statusEffects.confused || 0) > 0 && Math.random() < 0.5) {
+    addLog(`🌪️ ${enemy.name} is confused and stumbles!`, "status");
+    render();
+    setTimeout(advanceTurn, 600);
+    return;
+  }
+
+  const profile = AI_PROFILES[enemy.aiProfile] || AI_PROFILES.aggressive;
+  const action = profile(enemy);
+
+  // Self-heal
+  if (action.type === "self_heal") {
+    const healAmt = Math.floor(enemy.maxHp * 0.20);
+    enemy.hp = Math.min(enemy.maxHp, enemy.hp + healAmt);
+    const healFx = enemy.aiProfile === "luna" ? "🌙" : "☀️";
+    const healMsg = enemy.aiProfile === "luna"
+      ? `🌙 ${enemy.name} drinks in moonlight, restoring ${healAmt} HP!`
+      : `☀️ ${enemy.name} bathes in blinding light, restoring ${healAmt} HP!`;
+    addLog(healMsg, "heal");
+    render();
+    setTimeout(advanceTurn, 800);
+    return;
+  }
+
+  if (!action.target) {
+    advanceTurn();
+    return;
+  }
+
+  function finishEnemyAction() {
+    resolveAction(enemy, action);
+
+    if (action.type === "attack" && action.target.alive) {
+      const tgt = action.target;
+      const se  = tgt.statusEffects;
+      switch (enemy.aiProfile) {
+        case "sungoddess":
+          if (Math.random() < 0.30 && !(se.burning > 0)) {
+            se.burning = 2;
+            addLog(`☀️ ${enemy.name}'s blazing strike sets ${tgt.name} on fire!`, "status");
+          }
+          break;
+        case "luna":
+          if (Math.random() < 0.25 && !(se.burning > 0)) {
+            se.burning = 2;
+            addLog(`🌙 ${enemy.name}'s dark moonfire scorches ${tgt.name}!`, "status");
+          }
+          break;
+        case "windgod":
+          if (Math.random() < 0.40 && !(se.confused > 0)) {
+            se.confused = 2;
+            addLog(`🌪️ ${tgt.name} is swept into maddening winds!`, "status");
+          }
+          break;
+        case "raingod":
+          if (Math.random() < 0.35) {
+            const regain = Math.floor(enemy.maxHp * 0.12);
+            enemy.hp = Math.min(enemy.maxHp, enemy.hp + regain);
+            addLog(`🌧️ Rain flows back to ${enemy.name}, restoring ${regain} HP!`, "heal");
+          }
+          break;
+        case "snowgoddess":
+          if (Math.random() < 0.40 && !(se.frozen > 0)) {
+            se.frozen = 1;
+            addLog(`❄️ ${tgt.name} is encased in divine frost!`, "status");
+          }
+          break;
+        case "lightninggod":
+          if (Math.random() < 0.40 && !(se.electrocuted > 0)) {
+            se.electrocuted = 3;
+            addLog(`⚡ ${tgt.name} is blasted by sacred lightning!`, "status");
+          }
+          break;
+        case "ashdrake":
+          if (Math.random() < 0.35 && !(se.burning > 0)) {
+            se.burning = 3;
+            addLog(`🔥 ${tgt.name} is set ablaze by the drake's fiery claws!`, "status");
+          }
+          break;
+      }
+    }
+
+    if (!checkBattleOver()) {
+      render();
+      setTimeout(advanceTurn, 600);
+    }
+  }
+
+  // Show defend timing bar after the turn banner fades (~3s); enemy turn delay is 900ms so wait 2200ms more
+  if (action.type === "attack") {
+    const pattern = ATTACK_PATTERNS[action.patternKey] || ATTACK_PATTERNS.strike;
+    document.getElementById("enemy-turn-msg").textContent =
+      `${enemy.sprite} ${enemy.name} ${pattern.announce}`;
+    STATE.phase = "animating";
+    render();
+    setTimeout(() => {
+      // Force the turn banner off before showing the timing bar
+      const banner = document.getElementById("turn-banner");
+      banner.classList.remove("animating");
+      banner.style.opacity = "0";
+      startTimingBar((multiplier) => {
+        banner.style.opacity = "";
+        STATE.blockMultiplier = multiplier;
+        finishEnemyAction();
+      }, "defend", action.patternKey);
+    }, 2200);
+  } else {
+    finishEnemyAction();
+  }
+}
+
+// ─── WIN/LOSE ────────────────────────────────────────────────────────────────
+
+function checkBattleOver() {
+  if (STATE.phase === "battle_over") return true;
+  if (livingEnemies().length === 0) { endBattle("win"); return true; }
+  if (livingHeroes().length === 0)  { endBattle("lose"); return true; }
+  return false;
+}
+
+function endBattle(result) {
+  STATE.phase = "battle_over";
+  render();
+  const overlay  = document.getElementById("overlay");
+  const title    = document.getElementById("overlay-title");
+  const sub      = document.getElementById("overlay-subtitle");
+  const choices  = document.getElementById("level-up-choices");
+  overlay.classList.remove("hidden");
+
+  const restart = document.getElementById("btn-restart");
+  if (result === "win" && STATE.lunaFight && !STATE.testMode) {
+    // Play ending cutscene, then show a simple restart screen
+    overlay.classList.add("hidden");
+    startCutsceneWith(ENDING_PANELS, "THE END", () => {
+      document.getElementById("cutscene").classList.add("hidden");
+      overlay.classList.remove("hidden");
+      title.textContent = "🌙 Luna Defeated";
+      sub.textContent = "The tower is silent. The gods are free.";
+      overlay.style.background = "rgba(5,5,30,0.92)";
+      choices.classList.add("hidden");
+      restart.classList.remove("hidden");
+    });
+  } else if (result === "win" && STATE.lunaFight) {
+    title.textContent = "🌙 Luna Defeated! 🌙";
+    sub.textContent = "Test complete.";
+    overlay.style.background = "rgba(5,5,30,0.92)";
+    choices.classList.add("hidden");
+    restart.classList.remove("hidden");
+  } else if (result === "win" && STATE.testMode) {
+    const boss = STATE.enemies[0] || {};
+    title.textContent = `✔ ${boss.name || "Boss"} Defeated`;
+    sub.textContent = "Test complete.";
+    overlay.style.background = "rgba(5,20,5,0.88)";
+    choices.classList.add("hidden");
+    restart.classList.remove("hidden");
+  } else if (result === "win") {
+    STATE.skillStars++;
+    document.getElementById("skill-stars-val").textContent = STATE.skillStars;
+    title.textContent = `✨ Floor ${STATE.floor} Cleared! ✨`;
+    sub.textContent = "Choose your upgrade:";
+    overlay.style.background = "rgba(5,20,5,0.88)";
+    choices.classList.remove("hidden");
+    restart.classList.add("hidden");
+    const tier = Math.floor((STATE.floor - 1) / 5) + 1;
+    const atkGain = tier * 10;
+    const hpGain  = tier * 15;
+    document.querySelector("#btn-upgrade-atk .upgrade-desc").textContent = `+${atkGain} Attack`;
+    document.querySelector("#btn-upgrade-hp .upgrade-desc").textContent  = `+${hpGain} Max HP`;
+    const starBtn = document.getElementById("btn-upgrade-star");
+    const maxed = STATE.skillStars >= 15;
+    starBtn.disabled = maxed;
+    starBtn.querySelector(".upgrade-desc").textContent = maxed ? "Max stars reached" : "+1 star to spend on combo upgrades";
+  } else if (result === "lose") {
+    title.textContent = "💀 Defeated...";
+    sub.textContent = "The tower claims you. Your journey starts over.";
+    overlay.style.background = "rgba(30,5,5,0.88)";
+    choices.classList.add("hidden");
+    restart.classList.remove("hidden");
+  } else {
+    title.textContent = "🏃 Fled!";
+    sub.textContent = "You escaped into the night.";
+    overlay.style.background = "rgba(10,10,25,0.88)";
+    choices.classList.add("hidden");
+    restart.classList.add("hidden");
+  }
+}
+
+function startNextFloor() {
+  STATE.floor++;
+  STATE.heroLevel++;
+  STATE.blockMultiplier = 1.0;
+
+  const hero = STATE.heroes[0];
+  hero.statusEffects = {};
+  hero.spellCooldowns = {};
+  hero.alive = true;
+  hero.hp = hero.maxHp;
+
+
+  document.getElementById("overlay").classList.add("hidden");
+  document.getElementById("level-up-choices").classList.add("hidden");
+
+  // After all regular floors, face Luna
+  if (STATE.floor > STATE.maxFloors) {
+    startRooftopCutscene();
+    return;
+  }
+
+  STATE.enemies = [spawnBoss(STATE.floor)];
+
+  STATE.log = [];
+  STATE.round = 1;
+  STATE.phase = "player_turn";
+  STATE.pendingAction = null;
+  STATE.targetingGroup = null;
+
+  document.getElementById("round-display").textContent = `Floor ${STATE.floor}`;
+
+  buildEnemyDOM();
+  buildHeroStatusDOM();
+  buildTurnQueue();
+  STATE.activeActor = STATE.turnQueue[0];
+  STATE.phase = STATE.activeActor.type === "hero" ? "player_turn" : "enemy_turn";
+
+  const boss = STATE.enemies[0];
+  const cdNote = STATE.quickCast ? " · Quick Cast active!" : "";
+  addLog(`⚔️ Floor ${STATE.floor} — ${boss.sprite} ${boss.name} appears! "${boss.title}"`, "system");
+  addLog(`Turn order: ${STATE.turnQueue.map(u => u.name).join(" → ")}`, "system");
+
+  const firstActor = STATE.activeActor;
+  if (firstActor.type === "hero") {
+    showTurnBanner(`${firstActor.sprite} Your Turn`, firstActor.name);
+  } else {
+    showTurnBanner(`${firstActor.sprite} Enemy Turn`, firstActor.name);
+  }
+
+  render();
+
+  if (STATE.phase === "enemy_turn") setTimeout(runEnemyTurn, 1000);
+}
+
+// ─── ANIMATIONS ──────────────────────────────────────────────────────────────
+
+function animateHit(unitId) {
+  const el = document.getElementById("unit-" + unitId);
+  if (!el) return;
+  el.classList.remove("flash-red");
+  void el.offsetWidth; // reflow to restart animation
+  el.classList.add("flash-red");
+  setTimeout(() => el.classList.remove("flash-red"), 450);
+}
+
+function showSpellFx(fx) {
+  const el = document.createElement("div");
+  el.className = "spell-fx-overlay";
+  el.textContent = fx;
+  el.style.left = "50%";
+  el.style.top = "35%";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 750);
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+
+function render() {
+  renderEnemies();
+  renderHeroStatus();
+  renderActionPanel();
+  renderLog();
+}
+
+function renderEnemies() {
+  STATE.enemies.forEach(enemy => {
+    const card = document.getElementById("unit-" + enemy.id);
+    if (!card) return;
+
+    // HP bar
+    const bar = card.querySelector(".hp-bar");
+    const txt = card.querySelector(".hp-text");
+    const pct = enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0;
+    bar.style.width = (pct * 100) + "%";
+    bar.style.background = hpColor(pct);
+    txt.textContent = `${enemy.hp}/${enemy.maxHp}`;
+
+    // Dead
+    card.classList.toggle("dead", !enemy.alive);
+
+    // Targetable highlight
+    const isTargetable = STATE.phase === "targeting" &&
+                         STATE.targetingGroup === "enemy" && enemy.alive;
+    card.classList.toggle("targetable", isTargetable);
+
+    // Status icons
+    const statusEl = card.querySelector(".status-icons");
+    if (statusEl) statusEl.textContent = statusIcons(enemy.statusEffects);
+  });
+}
+
+function renderHeroStatus() {
+  STATE.heroes.forEach(hero => {
+    const card = document.getElementById("status-" + hero.id);
+    if (!card) return;
+
+    const hpBar  = card.querySelector(".hp-bar");
+    const hpVal  = card.querySelector(".hp-val");
+    const atkVal = card.querySelector(".hero-atk-val");
+    if (atkVal) atkVal.textContent = hero.stats.atk;
+
+    const hpPct = hero.maxHp > 0 ? hero.hp / hero.maxHp : 0;
+
+    hpBar.style.width = (hpPct * 100) + "%";
+    hpBar.style.background = hpColor(hpPct);
+    hpVal.textContent = `${hero.hp}/${hero.maxHp}`;
+
+    const isActive = STATE.activeActor && STATE.activeActor.id === hero.id;
+    card.classList.toggle("active", isActive && hero.alive &&
+      (STATE.phase === "player_turn" || STATE.phase === "spell_select" ||
+       STATE.phase === "item_select" || STATE.phase === "targeting"));
+    card.classList.toggle("dead", !hero.alive);
+
+    // Targetable for healing
+    const isTargetable = STATE.phase === "targeting" &&
+                         STATE.targetingGroup === "hero" && hero.alive;
+    card.style.cursor = isTargetable ? "pointer" : "default";
+    card.classList.toggle("targetable", isTargetable);
+
+    const statusEl = card.querySelector(".status-icons");
+    if (statusEl) statusEl.textContent = statusIcons(hero.statusEffects);
+  });
+}
+
+function renderActionPanel() {
+  ["menu-main", "menu-magic", "menu-target", "menu-enemy"]
+    .forEach(id => document.getElementById(id).classList.remove("active"));
+
+  const actor = STATE.activeActor;
+
+  switch (STATE.phase) {
+    case "player_turn": {
+      document.getElementById("menu-main").classList.add("active");
+      document.getElementById("acting-label").textContent =
+        actor ? `${actor.sprite} ${actor.name}'s Turn` : "Choose an action";
+      // Disable magic if all spells are on cooldown
+      const hasMagic = actor && actor.spells.some(s => !((actor.spellCooldowns || {})[s] > 0));
+      document.getElementById("btn-magic").disabled = !hasMagic;
+      break;
+    }
+    case "spell_select": {
+      document.getElementById("menu-magic").classList.add("active");
+      const list = document.getElementById("spell-list");
+      list.innerHTML = "";
+      actor.spells.forEach(spellKey => {
+        const spell = SPELLS[spellKey];
+        const btn = document.createElement("button");
+        const cd = actor.spellCooldowns[spellKey] || 0;
+        btn.className = "spell-btn";
+        const cdLabel = cd > 0
+          ? `<span class="mp-cost cd-active">${cd} turn${cd > 1 ? "s" : ""}</span>`
+          : `<span class="mp-cost cd-ready">Ready</span>`;
+        btn.innerHTML = `${spell.fx} ${spellKey}${cdLabel}`;
+        btn.disabled = cd > 0;
+        btn.addEventListener("click", () => {
+          STATE.pendingAction = { type: "magic", spellKey };
+          // All weather spells target a single enemy
+          STATE.targetingGroup = "enemy";
+          STATE.prevMenu = "magic";
+          STATE.phase = "targeting";
+          renderTargetMenu();
+        });
+        list.appendChild(btn);
+      });
+      break;
+    }
+    case "targeting": {
+      document.getElementById("menu-target").classList.add("active");
+      renderTargetMenu();
+      break;
+    }
+    case "enemy_turn": {
+      document.getElementById("menu-enemy").classList.add("active");
+      break;
+    }
+  }
+
+  renderHeroStatus(); // refresh targetable state
+}
+
+function renderTargetMenu() {
+  document.getElementById("menu-target").classList.add("active");
+  const list = document.getElementById("target-list");
+  list.innerHTML = "";
+  const group = STATE.targetingGroup === "enemy" ? livingEnemies() : livingHeroes();
+  group.forEach(unit => {
+    const btn = document.createElement("button");
+    btn.className = "target-btn";
+    btn.textContent = `${unit.sprite} ${unit.name} (${unit.hp}/${unit.maxHp})`;
+    btn.addEventListener("click", () => {
+      STATE.pendingAction.target = unit;
+      const action = STATE.pendingAction;
+      const actor = STATE.activeActor;
+      executeAction(actor, action);
+    });
+    list.appendChild(btn);
+  });
+}
+
+function renderLog() {
+  const logEl = document.getElementById("battle-log");
+  logEl.innerHTML = STATE.log
+    .slice(0, 16)
+    .map(e => `<div class="log-entry log-${e.type}">${e.text}</div>`)
+    .join("");
+}
+
+function hpColor(pct) {
+  if (pct > 0.5) return "linear-gradient(90deg, #22c55e, #16a34a)";
+  if (pct > 0.25) return "linear-gradient(90deg, #eab308, #ca8a04)";
+  return "linear-gradient(90deg, #ef4444, #dc2626)";
+}
+
+// ─── DOM BUILDERS ────────────────────────────────────────────────────────────
+
+function buildEnemyDOM() {
+  const row = document.getElementById("enemy-row");
+  row.innerHTML = "";
+  STATE.enemies.forEach(enemy => {
+    const card = document.createElement("div");
+    card.className = "enemy-card";
+    card.id = "unit-" + enemy.id;
+    card.innerHTML = `
+      <div class="unit-sprite">${enemy.sprite}</div>
+      <div class="unit-name">${enemy.name}</div>
+      <div class="bar-wrap" style="width:90px">
+        <div class="hp-bar" style="width:100%"></div>
+      </div>
+      <div class="hp-text" style="font-size:0.6rem;font-family:monospace;color:#a0a0b0">
+        ${enemy.hp}/${enemy.maxHp}
+      </div>
+      <div class="status-icons"></div>
+    `;
+    // Click to target
+    card.addEventListener("click", () => {
+      if (STATE.phase === "targeting" && STATE.targetingGroup === "enemy" && enemy.alive) {
+        STATE.pendingAction.target = enemy;
+        executeAction(STATE.activeActor, STATE.pendingAction);
+      }
+    });
+    row.appendChild(card);
+  });
+}
+
+function buildHeroStatusDOM() {
+  const row = document.getElementById("hero-status-row");
+  row.innerHTML = "";
+  STATE.heroes.forEach(hero => {
+    const card = document.createElement("div");
+    card.className = "hero-status-card";
+    card.id = "status-" + hero.id;
+    card.innerHTML = `
+      <div class="hero-name-row">
+        <span class="hero-sprite">${hero.sprite}</span>
+        <span class="hero-name">${hero.name}</span>
+        <span class="hero-atk-label" style="font-size:0.6rem;font-family:monospace;color:#c9a84c;margin-left:8px">⚔️ ATK <span class="hero-atk-val">${hero.stats.atk}</span></span>
+        <span class="status-icons"></span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">HP</span>
+        <div class="bar-wrap"><div class="hp-bar" style="width:100%"></div></div>
+        <span class="bar-val hp-val">${hero.hp}/${hero.maxHp}</span>
+      </div>
+    `;
+    // Click to target (for healing)
+    card.addEventListener("click", () => {
+      if (STATE.phase === "targeting" && STATE.targetingGroup === "hero" && hero.alive) {
+        STATE.pendingAction.target = hero;
+        resolveAction(STATE.activeActor, STATE.pendingAction);
+        if (!checkBattleOver()) {
+          render();
+          setTimeout(advanceTurn, 500);
+        }
+      }
+    });
+    row.appendChild(card);
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+function initBattle() {
+  STATE.heroes = deepClone(HERO_TEMPLATES);
+  STATE.enemies = [spawnBoss(1)];
+  STATE.log = [];
+  STATE.round = 1;
+  STATE.floor = 1;
+  STATE.heroLevel = 1;
+  STATE.quickCast = false;
+  STATE.blockMultiplier = 1.0;
+  STATE.lunaFight = false;
+  STATE.testMode = false;
+  STATE.testAtkBonus    = 0;
+  STATE.testHpBonus     = 0;
+  STATE.testSkillStars  = 0;
+  STATE.skillStars = 0;
+  STATE.skills = {};
+  STATE.phase = "player_turn";
+  STATE.pendingAction = null;
+  STATE.targetingGroup = null;
+
+
+  document.getElementById("round-display").textContent = "Floor 1";
+  document.getElementById("overlay").classList.add("hidden");
+  document.getElementById("level-up-choices").classList.add("hidden");
+
+  buildEnemyDOM();
+  buildHeroStatusDOM();
+
+  buildTurnQueue();
+  STATE.activeActor = STATE.turnQueue[0];
+  STATE.phase = STATE.activeActor.type === "hero" ? "player_turn" : "enemy_turn";
+
+  const firstBoss = STATE.enemies[0];
+  addLog(`⚔️ Floor 1 — ${firstBoss.sprite} ${firstBoss.name} appears! "${firstBoss.title}"`, "system");
+  addLog(`Turn order: ${STATE.turnQueue.map(u => u.name).join(" → ")}`, "system");
+
+  const firstActor = STATE.activeActor;
+  if (firstActor.type === "hero") {
+    showTurnBanner(`${firstActor.sprite} Your Turn`, firstActor.name);
+  } else {
+    showTurnBanner(`${firstActor.sprite} Enemy Turn`, firstActor.name);
+  }
+
+  render();
+
+  if (STATE.phase === "enemy_turn") setTimeout(runEnemyTurn, 1000);
+}
+
+// ─── EVENT WIRING ────────────────────────────────────────────────────────────
+
+document.getElementById("btn-combo-ref").addEventListener("click", () => {
+  document.getElementById("combo-ref-panel").classList.toggle("open");
+});
+
+document.getElementById("btn-skill-tree-battle").addEventListener("click", () => {
+  renderSkillTree();
+  document.getElementById("skill-tree-modal").classList.remove("hidden");
+});
+
+document.getElementById("combo-ref-close").addEventListener("click", () => {
+  document.getElementById("combo-ref-panel").classList.remove("open");
+});
+
+// ─── SKILL TREE UI ───────────────────────────────────────────────────────────
+
+function renderSkillTree() {
+  document.getElementById("skill-tree-stars-val").textContent = STATE.skillStars;
+  document.getElementById("skill-stars-val").textContent = STATE.skillStars;
+
+  const container = document.getElementById("skill-tree-branches");
+  container.innerHTML = "";
+
+  const COMBO_BRANCHES = [
+    { key: "melt",          label: "Melt",          emoji: "☀️+❄️" },
+    { key: "fan_flames",    label: "Fan Flames",     emoji: "🌪️+🔥" },
+    { key: "blizzard",      label: "Blizzard",       emoji: "🌪️+❄️" },
+    { key: "deep_freeze",   label: "Deep Freeze",    emoji: "❄️+💧" },
+    { key: "short_circuit", label: "Short Circuit",  emoji: "⚡+💧" },
+  ];
+
+  function makeNodeCard(node) {
+    const purchased = !!STATE.skills[node.key];
+    const prereqMet = !node.requires || !!STATE.skills[node.requires];
+    const canAfford = STATE.skillStars >= node.cost;
+    const available = !purchased && prereqMet && canAfford;
+    const locked    = !purchased && !prereqMet;
+
+    const card = document.createElement("button");
+    card.className = "skill-node " + (purchased ? "purchased" : available ? "available" : locked ? "locked" : "");
+    card.disabled  = purchased || !available;
+    card.innerHTML = `
+      <div class="skill-node-name">${node.name}</div>
+      <div class="skill-node-desc">${node.desc}</div>
+      <div class="skill-node-cost">${purchased ? "✓ Unlocked" : `🌟 ${node.cost} star${node.cost > 1 ? "s" : ""}`}</div>
+    `;
+    if (available) {
+      card.addEventListener("click", () => {
+        STATE.skills[node.key] = true;
+        STATE.skillStars -= node.cost;
+        renderSkillTree();
+      });
+    }
+    return card;
+  }
+
+  // Header row
+  const headerRow = document.createElement("div");
+  headerRow.className = "skill-grid-row";
+  const cornerCell = document.createElement("div");
+  cornerCell.className = "skill-row-label";
+  headerRow.appendChild(cornerCell);
+  COMBO_BRANCHES.forEach(branch => {
+    const cell = document.createElement("div");
+    cell.className = "skill-col-header";
+    cell.innerHTML = `${branch.emoji}<div class="skill-col-label">${branch.label}</div>`;
+    headerRow.appendChild(cell);
+  });
+  container.appendChild(headerRow);
+
+  // Damage row (tier 1)
+  const dmgRow = document.createElement("div");
+  dmgRow.className = "skill-grid-row";
+  const dmgLabel = document.createElement("div");
+  dmgLabel.className = "skill-row-label";
+  dmgLabel.innerHTML = `⚔️<span>Damage</span>`;
+  dmgRow.appendChild(dmgLabel);
+  COMBO_BRANCHES.forEach(branch => {
+    const node = SKILL_TREE.find(n => n.combo === branch.key && n.tier === 1);
+    const cell = document.createElement("div");
+    cell.className = "skill-grid-cell";
+    if (node) cell.appendChild(makeNodeCard(node));
+    dmgRow.appendChild(cell);
+  });
+  container.appendChild(dmgRow);
+
+  // Effect row (tier 2)
+  const fxRow = document.createElement("div");
+  fxRow.className = "skill-grid-row";
+  const fxLabel = document.createElement("div");
+  fxLabel.className = "skill-row-label";
+  fxLabel.innerHTML = `✨<span>Effect</span>`;
+  fxRow.appendChild(fxLabel);
+  COMBO_BRANCHES.forEach(branch => {
+    const node = SKILL_TREE.find(n => n.combo === branch.key && n.tier === 2);
+    const cell = document.createElement("div");
+    cell.className = "skill-grid-cell";
+    if (node) cell.appendChild(makeNodeCard(node));
+    fxRow.appendChild(cell);
+  });
+  container.appendChild(fxRow);
+}
+
+document.getElementById("btn-open-skill-tree").addEventListener("click", () => {
+  renderSkillTree();
+  document.getElementById("skill-tree-modal").classList.remove("hidden");
+});
+
+document.getElementById("skill-tree-close").addEventListener("click", () => {
+  document.getElementById("skill-tree-modal").classList.add("hidden");
+});
+
+document.getElementById("btn-give-up").addEventListener("click", () => {
+  if (STATE.phase === "battle_over") return;
+  if (confirm("Return to the title screen?")) {
+    ["overlay", "cutscene", "floor-select", "boss-select", "skill-tree-modal"]
+      .forEach(id => document.getElementById(id)?.classList.add("hidden"));
+    document.getElementById("combo-ref-panel").classList.remove("open");
+    document.getElementById("title-screen").classList.remove("hidden");
+    STATE.phase = "battle_over";
+  }
+});
+
+document.getElementById("btn-pass").addEventListener("click", () => {
+  if (STATE.phase !== "player_turn") return;
+  addLog(`${STATE.activeActor.sprite} ${STATE.activeActor.name} waits...`, "system");
+  render();
+  setTimeout(advanceTurn, 400);
+});
+
+document.getElementById("btn-attack").addEventListener("click", () => {
+  if (STATE.phase !== "player_turn") return;
+  STATE.pendingAction = { type: "attack" };
+  STATE.targetingGroup = "enemy";
+  STATE.prevMenu = "main";
+  STATE.phase = "targeting";
+  render();
+});
+
+document.getElementById("btn-magic").addEventListener("click", () => {
+  if (STATE.phase !== "player_turn") return;
+  STATE.phase = "spell_select";
+  render();
+});
+
+document.getElementById("back-from-magic").addEventListener("click", () => {
+  STATE.phase = "player_turn";
+  render();
+});
+
+document.getElementById("back-from-target").addEventListener("click", () => {
+  STATE.phase = STATE.prevMenu === "magic" ? "spell_select"
+              : "player_turn";
+  render();
+});
+
+document.getElementById("btn-restart").addEventListener("click", () => {
+  document.getElementById("overlay").classList.add("hidden");
+  if (STATE.testMode) {
+    buildBossSelectScreen();
+    document.getElementById("boss-select").classList.remove("hidden");
+  } else {
+    document.getElementById("floor-select").classList.remove("hidden");
+  }
+});
+
+document.getElementById("btn-upgrade-atk").addEventListener("click", () => {
+  const tier = Math.floor((STATE.floor - 1) / 5) + 1;
+  STATE.heroes[0].stats.atk += tier * 10;
+  startNextFloor();
+});
+document.getElementById("btn-upgrade-hp").addEventListener("click", () => {
+  const tier = Math.floor((STATE.floor - 1) / 5) + 1;
+  const gain = tier * 15;
+  const hero = STATE.heroes[0];
+  hero.maxHp += gain;
+  hero.hp = Math.min(hero.maxHp, hero.hp + gain);
+  startNextFloor();
+});
+document.getElementById("btn-upgrade-star").addEventListener("click", () => {
+  STATE.skillStars += 1;
+  startNextFloor();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !document.getElementById("cutscene").classList.contains("hidden")) {
+    e.preventDefault();
+    if (cutsceneIndex < activeCutscenePanels.length) cutsceneAdvance();
+    return;
+  }
+  if (e.code === "Space" && timingActive) {
+    e.preventDefault();
+    const cursor = document.getElementById("timing-cursor");
+    completeTiming(parseFloat(cursor.style.left) / 100);
+  }
+});
+
+// ─── CUTSCENE ────────────────────────────────────────────────────────────────
+
+const INTRO_PANELS = [
+  "In an age long forgotten, five gods watched over the world.",
+  "The Sun Goddess bathed the land in warmth.\nThe Wind God carried seeds across mountains.\nThe Rain God nourished every river and field.\nThe Snow Goddess brought rest to a weary earth.\nThe Lightning God struck with purpose — never cruelty.",
+  "Then something broke.\n\nOne by one, the gods fell into madness.\nTheir gifts became weapons. Their love became rage.",
+  "No one knows why.\nNo one survived long enough to ask.\n\nExcept one.",
+  "You are the son of the Sun Goddess.\nYou watched your mother's warmth turn to burning wrath.\nYou still remember her voice before the crazed dark took her.",
+  "The gods have sealed themselves in a tower at the heart of the world.\nEach floor is a god lost. Each door is a test you may not survive.",
+  "You do not climb for glory.\nYou climb to bring them back — or put them to rest.\n\nEither way, it ends here.",
+];
+
+const ROOFTOP_PANELS = [
+  "After everything... you emerge onto the rooftop.",
+  "The sky is wrong.\nThe moon hangs too close, too large — pulsing with cold, dark light.",
+  "Then you see her.\n\nLuna. The Moon.\nShe was here all along — watching, waiting, pulling strings.",
+  "'You freed them from me?' Her voice rolls across the sky like distant thunder.\n'No. You only emptied my tower.'",
+  "'The gods were mine to break.\nMine to reshape. Mine to command.\nAnd now — so are you.'",
+  "The air turns cold. The stars go out one by one.\n\nThis is where it ends.",
+];
+
+const ENDING_PANELS = [
+  "Luna's light gutters out.\n\nShe falls — slowly, silently — and the moon returns to its place in the sky.",
+  "And then, one by one, the gods wake up.",
+  "The Wind God's gale softens to a breeze.\nThe Rain God weeps — but gently, the way rain is meant to fall.\nThe Snow Goddess sighs, and the cold becomes peaceful again.\nThe Lightning God's thunder rolls away into the distance.",
+  "And then she speaks.\n\n'My son.'\n\nYour mother's voice. The real one. Warm.",
+  "'I am so sorry for what I became.\nShe had us for so long — I forgot what it felt like to be free.'\n\nYou don't say anything.\nYou don't have to.",
+  "The gods descend from the tower together.\nNot as the Crazed, the Distorted, the Dark, the Corrupt.\n\nJust as themselves.",
+  "The sun rises.\n\nAnd for the first time in years, it feels like it means it.",
+];
+
+let cutsceneIndex = 0;
+let activeCutscenePanels = INTRO_PANELS;
+let cutsceneEndCallback = null;
+
+function cutsceneAdvance() {
+  const textEl  = document.getElementById("cutscene-text");
+  const titleEl = document.getElementById("cutscene-title");
+  const numEl   = document.getElementById("cutscene-panel-num");
+  const hintEl  = document.getElementById("cutscene-hint");
+  const beginEl = document.getElementById("btn-begin");
+
+  cutsceneIndex++;
+
+  if (cutsceneIndex > activeCutscenePanels.length) return;
+
+  const isLast = cutsceneIndex === activeCutscenePanels.length;
+
+  textEl.classList.remove("visible");
+  titleEl.classList.add("visible");
+
+  setTimeout(() => {
+    textEl.style.whiteSpace = "pre-line";
+    textEl.textContent = activeCutscenePanels[cutsceneIndex - 1];
+    numEl.textContent  = `${cutsceneIndex} / ${activeCutscenePanels.length}`;
+    textEl.classList.add("visible");
+
+    if (isLast) {
+      beginEl.classList.add("visible");
+      hintEl.style.display = "none";
+    }
+  }, 400);
+}
+
+function startCutsceneWith(panels, buttonLabel, callback) {
+  activeCutscenePanels = panels;
+  cutsceneEndCallback  = callback;
+  cutsceneIndex = 0;
+  document.getElementById("cutscene-title").classList.remove("visible");
+  document.getElementById("cutscene-text").classList.remove("visible");
+  const beginEl = document.getElementById("btn-begin");
+  beginEl.textContent = buttonLabel;
+  beginEl.classList.remove("visible");
+  document.getElementById("cutscene-hint").style.display = "";
+  document.getElementById("cutscene").classList.remove("hidden");
+  setTimeout(cutsceneAdvance, 600);
+}
+
+function startCutscene() {
+  startCutsceneWith(INTRO_PANELS, "ENTER THE TOWER", () => {
+    document.getElementById("cutscene").classList.add("hidden");
+    document.getElementById("floor-select").classList.remove("hidden");
+  });
+}
+
+function startRooftopCutscene() {
+  startCutsceneWith(ROOFTOP_PANELS, "FACE LUNA", () => {
+    document.getElementById("cutscene").classList.add("hidden");
+    startLunaBattle();
+  });
+}
+
+function endCutscene() {
+  if (cutsceneEndCallback) cutsceneEndCallback();
+}
+
+function startLunaBattle() {
+  STATE.lunaFight = true;
+  STATE.enemies = [spawnLuna()];
+  STATE.log = [];
+  STATE.round = 1;
+  STATE.phase = "player_turn";
+  STATE.pendingAction = null;
+  STATE.targetingGroup = null;
+
+  document.getElementById("round-display").textContent = "The Rooftop";
+
+  buildEnemyDOM();
+  buildHeroStatusDOM();
+  buildTurnQueue();
+  STATE.activeActor = STATE.turnQueue[0];
+  STATE.phase = STATE.activeActor.type === "hero" ? "player_turn" : "enemy_turn";
+
+  const luna = STATE.enemies[0];
+  addLog(`🌙 ${luna.name} descends from the dark sky! "${luna.title}"`, "system");
+  addLog(`Turn order: ${STATE.turnQueue.map(u => u.name).join(" → ")}`, "system");
+
+  const firstActor = STATE.activeActor;
+  if (firstActor.type === "hero") {
+    showTurnBanner(`${firstActor.sprite} Your Turn`, firstActor.name);
+  } else {
+    showTurnBanner(`${firstActor.sprite} Enemy Turn`, firstActor.name);
+  }
+
+  render();
+  if (STATE.phase === "enemy_turn") setTimeout(runEnemyTurn, 1000);
+}
+
+document.getElementById("cutscene").addEventListener("click", (e) => {
+  if (e.target === document.getElementById("btn-begin")) return;
+  if (cutsceneIndex < activeCutscenePanels.length) cutsceneAdvance();
+});
+
+document.getElementById("btn-begin").addEventListener("click", endCutscene);
+
+document.querySelectorAll(".floor-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    STATE.maxFloors = parseInt(btn.dataset.floors, 10);
+    document.getElementById("floor-select").classList.add("hidden");
+    initBattle();
+  });
+});
+
+document.getElementById("floor-select-test").addEventListener("click", () => {
+  document.getElementById("floor-select").classList.add("hidden");
+  buildBossSelectScreen();
+  document.getElementById("boss-select").classList.remove("hidden");
+});
+
+document.getElementById("boss-select-back").addEventListener("click", () => {
+  document.getElementById("boss-select").classList.add("hidden");
+  document.getElementById("floor-select").classList.remove("hidden");
+});
+
+function buildBossSelectScreen() {
+  const list = document.getElementById("boss-select-list");
+  list.innerHTML = "";
+
+  // ── Hero stat controls ───────────────────────────────────────────────────
+  const setupLabel = document.createElement("div");
+  setupLabel.className = "boss-cycle-label";
+  setupLabel.textContent = "— Hero Setup —";
+  list.appendChild(setupLabel);
+
+  const setup = document.createElement("div");
+  setup.id = "test-hero-setup";
+
+  const baseAtk = HERO_TEMPLATES[0].stats.atk;
+  const baseHp  = HERO_TEMPLATES[0].maxHp;
+
+  function makeStatControl(label, getVal, step, onChange) {
+    const wrap = document.createElement("div");
+    wrap.className = "test-stat-control";
+    const lbl = document.createElement("span");
+    lbl.textContent = label;
+    const minus = document.createElement("button");
+    minus.className = "test-stat-btn";
+    minus.textContent = "−";
+    const val = document.createElement("div");
+    val.className = "test-stat-val";
+    val.textContent = getVal();
+    const plus = document.createElement("button");
+    plus.className = "test-stat-btn";
+    plus.textContent = "+";
+    minus.addEventListener("click", () => { onChange(-step); val.textContent = getVal(); });
+    plus.addEventListener("click",  () => { onChange(+step); val.textContent = getVal(); });
+    wrap.append(lbl, minus, val, plus);
+    return wrap;
+  }
+
+  setup.appendChild(makeStatControl(
+    `⚔️ ATK (base ${baseAtk})`,
+    () => baseAtk + STATE.testAtkBonus,
+    10,
+    (delta) => { STATE.testAtkBonus = Math.max(0, STATE.testAtkBonus + delta); }
+  ));
+  setup.appendChild(makeStatControl(
+    `❤️ Max HP (base ${baseHp})`,
+    () => baseHp + STATE.testHpBonus,
+    25,
+    (delta) => { STATE.testHpBonus = Math.max(0, STATE.testHpBonus + delta); }
+  ));
+  setup.appendChild(makeStatControl(
+    `🌟 Skill Stars`,
+    () => STATE.testSkillStars,
+    1,
+    (delta) => { STATE.testSkillStars = Math.max(0, STATE.testSkillStars + delta); }
+  ));
+
+  list.appendChild(setup);
+
+  const bossLabel = document.createElement("div");
+  bossLabel.className = "boss-cycle-label";
+  bossLabel.style.marginTop = "16px";
+  bossLabel.textContent = "— Choose a Boss —";
+  list.appendChild(bossLabel);
+
+  CYCLE_PREFIXES.forEach((prefix, cycle) => {
+    const label = document.createElement("div");
+    label.className = "boss-cycle-label";
+    label.textContent = `— ${prefix} —`;
+    list.appendChild(label);
+
+    const row = document.createElement("div");
+    row.className = "boss-cycle-row";
+
+    BOSS_POOL.forEach((template, bossIdx) => {
+      const floor = cycle * BOSS_POOL.length + bossIdx + 1;
+      const btn = document.createElement("button");
+      btn.className = "boss-test-btn";
+      btn.textContent = `${template.sprite} ${prefix} ${template.baseName}`;
+      btn.addEventListener("click", () => startTestBattle(floor, false));
+      row.appendChild(btn);
+    });
+
+    list.appendChild(row);
+  });
+
+  // Luna button
+  const lunaLabel = document.createElement("div");
+  lunaLabel.className = "boss-cycle-label";
+  lunaLabel.style.marginTop = "20px";
+  lunaLabel.textContent = "— Luna (Final Boss) —";
+  list.appendChild(lunaLabel);
+
+  const lunaRow = document.createElement("div");
+  lunaRow.className = "boss-cycle-row";
+  [5, 10, 15, 20].forEach(floors => {
+    const btn = document.createElement("button");
+    btn.className = "boss-test-btn luna-btn";
+    btn.textContent = `🌙 Luna — ${floors} Floors`;
+    btn.addEventListener("click", () => startTestBattle(null, true, floors));
+    lunaRow.appendChild(btn);
+  });
+  list.appendChild(lunaRow);
+
+  // Cutscene buttons
+  const csLabel = document.createElement("div");
+  csLabel.className = "boss-cycle-label";
+  csLabel.style.marginTop = "28px";
+  csLabel.textContent = "— Cutscenes —";
+  list.appendChild(csLabel);
+
+  const csRow = document.createElement("div");
+  csRow.className = "boss-cycle-row";
+
+  const introBtn = document.createElement("button");
+  introBtn.className = "boss-test-btn";
+  introBtn.textContent = "📖 Opening Cutscene";
+  introBtn.addEventListener("click", () => {
+    document.getElementById("boss-select").classList.add("hidden");
+    startCutsceneWith(INTRO_PANELS, "BACK TO TESTING", () => {
+      document.getElementById("cutscene").classList.add("hidden");
+      buildBossSelectScreen();
+      document.getElementById("boss-select").classList.remove("hidden");
+    });
+  });
+  csRow.appendChild(introBtn);
+
+  const rooftopBtn = document.createElement("button");
+  rooftopBtn.className = "boss-test-btn";
+  rooftopBtn.textContent = "🌙 Rooftop Cutscene";
+  rooftopBtn.addEventListener("click", () => {
+    document.getElementById("boss-select").classList.add("hidden");
+    startCutsceneWith(ROOFTOP_PANELS, "BACK TO TESTING", () => {
+      document.getElementById("cutscene").classList.add("hidden");
+      buildBossSelectScreen();
+      document.getElementById("boss-select").classList.remove("hidden");
+    });
+  });
+  csRow.appendChild(rooftopBtn);
+
+  const endingBtn = document.createElement("button");
+  endingBtn.className = "boss-test-btn";
+  endingBtn.textContent = "🌅 Ending Cutscene";
+  endingBtn.addEventListener("click", () => {
+    document.getElementById("boss-select").classList.add("hidden");
+    startCutsceneWith(ENDING_PANELS, "BACK TO TESTING", () => {
+      document.getElementById("cutscene").classList.add("hidden");
+      buildBossSelectScreen();
+      document.getElementById("boss-select").classList.remove("hidden");
+    });
+  });
+  csRow.appendChild(endingBtn);
+
+  list.appendChild(csRow);
+}
+
+function startTestBattle(floor, isLuna, lunaFloors = 20) {
+  document.getElementById("boss-select").classList.add("hidden");
+
+  // Reset hero and state
+  STATE.heroes = deepClone(HERO_TEMPLATES);
+  const hero = STATE.heroes[0];
+  hero.stats.atk += STATE.testAtkBonus;
+  hero.maxHp      += STATE.testHpBonus;
+  hero.hp          = hero.maxHp;
+  STATE.log = [];
+  STATE.round = 1;
+  STATE.heroLevel = 1;
+  STATE.quickCast = false;
+  STATE.blockMultiplier = 1.0;
+  STATE.testMode = true;
+  STATE.pendingAction = null;
+  STATE.targetingGroup = null;
+
+  STATE.skillStars = STATE.testSkillStars;
+  STATE.skills = {};
+
+  if (isLuna) {
+    STATE.maxFloors = lunaFloors;
+    STATE.floor = STATE.maxFloors;
+    STATE.lunaFight = true;
+    STATE.enemies = [spawnLuna()];
+    document.getElementById("round-display").textContent = "Testing — The Rooftop";
+  } else {
+    STATE.maxFloors = floor;
+    STATE.floor = floor;
+    STATE.lunaFight = false;
+    STATE.enemies = [spawnBoss(floor)];
+    document.getElementById("round-display").textContent = `Testing — Floor ${floor}`;
+  }
+
+  document.getElementById("overlay").classList.add("hidden");
+  document.getElementById("level-up-choices").classList.add("hidden");
+
+  buildEnemyDOM();
+  buildHeroStatusDOM();
+  buildTurnQueue();
+  STATE.activeActor = STATE.turnQueue[0];
+  STATE.phase = STATE.activeActor.type === "hero" ? "player_turn" : "enemy_turn";
+
+  const boss = STATE.enemies[0];
+  addLog(`🧪 Test fight: ${boss.sprite} ${boss.name} — "${boss.title}"`, "system");
+  addLog(`Turn order: ${STATE.turnQueue.map(u => u.name).join(" → ")}`, "system");
+
+  const firstActor = STATE.activeActor;
+  showTurnBanner(
+    firstActor.type === "hero" ? `${firstActor.sprite} Your Turn` : `${firstActor.sprite} Enemy Turn`,
+    firstActor.name
+  );
+
+  render();
+  if (STATE.phase === "enemy_turn") setTimeout(runEnemyTurn, 1000);
+}
+
+// ─── START ───────────────────────────────────────────────────────────────────
+
+function leaveTitleScreen() {
+  STATE.easierMode = document.getElementById("chk-easier-mode").checked;
+  document.getElementById("title-screen").classList.add("hidden");
+  startCutscene();
+}
+
+document.getElementById("btn-title-start").addEventListener("click", leaveTitleScreen);
+
+window.addEventListener("DOMContentLoaded", () => {
+  // Keyboard shortcut: Space or Enter on title screen
+  function titleKeyHandler(e) {
+    if ((e.code === "Space" || e.code === "Enter") &&
+        !document.getElementById("title-screen").classList.contains("hidden")) {
+      e.preventDefault();
+      leaveTitleScreen();
+      window.removeEventListener("keydown", titleKeyHandler);
+    }
+  }
+  window.addEventListener("keydown", titleKeyHandler);
+});
+</script>
+</body>
+</html>
