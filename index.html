@@ -2585,6 +2585,7 @@ function showSpellFx(fx) {
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 
 function render() {
+  document.getElementById("btn-give-up").textContent = STATE.testMode ? "⚙ Quit" : "Give Up";
   renderEnemies();
   renderHeroStatus();
   renderActionPanel();
@@ -2961,12 +2962,21 @@ document.getElementById("skill-tree-close").addEventListener("click", () => {
 
 document.getElementById("btn-give-up").addEventListener("click", () => {
   if (STATE.phase === "battle_over") return;
-  if (confirm("Return to the title screen?")) {
-    ["overlay", "cutscene", "floor-select", "boss-select", "skill-tree-modal"]
+  if (STATE.testMode) {
+    STATE.phase = "battle_over";
+    ["overlay", "cutscene", "skill-tree-modal"]
       .forEach(id => document.getElementById(id)?.classList.add("hidden"));
     document.getElementById("combo-ref-panel").classList.remove("open");
-    document.getElementById("title-screen").classList.remove("hidden");
-    STATE.phase = "battle_over";
+    buildBossSelectScreen();
+    document.getElementById("boss-select").classList.remove("hidden");
+  } else {
+    if (confirm("Return to the title screen?")) {
+      ["overlay", "cutscene", "floor-select", "boss-select", "skill-tree-modal"]
+        .forEach(id => document.getElementById(id)?.classList.add("hidden"));
+      document.getElementById("combo-ref-panel").classList.remove("open");
+      document.getElementById("title-screen").classList.remove("hidden");
+      STATE.phase = "battle_over";
+    }
   }
 });
 
