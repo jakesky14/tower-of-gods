@@ -52,6 +52,19 @@
     transition: color 0.2s, border-color 0.2s;
   }
   #btn-give-up:hover { color: #f87171; border-color: #7f1d1d; }
+  #btn-mute {
+    position: absolute;
+    right: 0; top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    background: transparent;
+    border: 1px solid rgba(201,168,76,0.3);
+    color: #c9a84c;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  #btn-mute:hover { border-color: rgba(201,168,76,0.7); }
 
   /* Enemy Row */
   #enemy-row {
@@ -1339,6 +1352,7 @@
   <div id="battle-header">
   <button id="btn-give-up">Give Up</button>
   <span id="round-display">Floor 1</span>
+  <button id="btn-mute">🔊</button>
 </div>
 
   <div id="enemy-row"></div>
@@ -1677,6 +1691,118 @@ function spawnLuna() {
   base.stats.atk = Math.floor(base.stats.atk * atkScale);
   return base;
 }
+
+// ─── MUSIC ───────────────────────────────────────────────────────────────────
+
+const Music = (() => {
+  let ctx = null, master = null;
+  let loopTimer = null, _muted = false, _track = null;
+
+  const HZ = {
+    E2:82.41,  F2:87.31,  G2:98.00,  A2:110.00, B2:123.47,
+    C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196.00, A3:220.00, B3:246.94,
+    C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+    C5:523.25, D5:587.33, E5:659.26, F5:698.46, G5:783.99, A5:880.00,
+  };
+
+  function getCtx() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain();
+      master.gain.value = _muted ? 0 : 0.22;
+      master.connect(ctx.destination);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function tone(type, hz, t0, dur, vol) {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.value = hz;
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.linearRampToValueAtTime(0.001, t0 + dur * 0.85);
+    o.connect(g); g.connect(master);
+    o.start(t0); o.stop(t0 + dur);
+  }
+
+  // Title theme — Am arpeggios, 72 BPM, ~13s loop
+  function scheduleTitle(t0) {
+    const b = 60 / 72;
+    const mel = [
+      ['A4',1],['C5',0.5],['E5',0.5],['A5',1],['E5',0.5],['C5',0.5],
+      ['G4',1],['B4',0.5],['D5',0.5],['G5',1],['D5',0.5],['B4',0.5],
+      ['F4',1],['A4',0.5],['C5',0.5],['F5',1],['C5',0.5],['A4',0.5],
+      ['E4',1],['G4',0.5],['B4',0.5],['E5',2],
+    ];
+    const bass = [['A2',4],['G2',4],['F2',4],['E2',4]];
+    let t = t0;
+    mel.forEach(([n,d])  => { if(HZ[n]) tone('triangle', HZ[n], t, d*b*0.88, 0.13); t += d*b; });
+    t = t0;
+    bass.forEach(([n,d]) => { if(HZ[n]) tone('sine',     HZ[n], t, d*b*0.75, 0.10); t += d*b; });
+    return mel.reduce((s,[,d]) => s+d, 0) * b;
+  }
+
+  // Battle theme — Am driving, 168 BPM, ~11s loop
+  function scheduleBattle(t0) {
+    const b = 60 / 168;
+    const mel = [
+      ['A4',0.5],['A4',0.5],['A5',0.5],['G5',0.5],['E5',0.5],['A5',0.5],['G5',0.5],['E5',0.5],
+      ['C5',0.5],['C5',0.5],['A5',0.5],['G5',0.5],['E5',0.5],['D5',0.5],['C5',0.5],['B4',0.5],
+      ['B4',0.5],['B4',0.5],['B4',1],  ['A4',0.5],['G4',0.5],['A4',1],
+      ['E5',0.5],['D5',0.5],['C5',0.5],['B4',0.5],['A4',2],
+      ['E5',1],  ['F5',1],  ['G5',1],  ['A5',1],
+      ['G5',1],  ['E5',1],  ['D5',1],  ['C5',1],
+      ['B4',0.5],['C5',0.5],['D5',0.5],['E5',0.5],['F5',0.5],['E5',0.5],['D5',0.5],['C5',0.5],
+      ['B4',1],  ['A4',1],  ['G4',1],  ['A4',1],
+    ];
+    const bass = [
+      ['A2',1],['A2',0.5],['A2',0.5],['A2',1],['A2',1],
+      ['C3',1],['C3',0.5],['C3',0.5],['C3',1],['C3',1],
+      ['B2',1],['B2',0.5],['B2',0.5],['B2',1],['B2',1],
+      ['A2',2],['G2',2],
+      ['A2',1],['A2',0.5],['A2',0.5],['A2',1],['A2',1],
+      ['F2',1],['F2',0.5],['F2',0.5],['F2',1],['F2',1],
+      ['E2',1],['E2',0.5],['E2',0.5],['E2',1],['E2',1],
+      ['A2',2],['A2',2],
+    ];
+    let t = t0;
+    mel.forEach(([n,d])  => { if(HZ[n]) tone('square', HZ[n], t, d*b*0.65, 0.08); t += d*b; });
+    t = t0;
+    bass.forEach(([n,d]) => { if(HZ[n]) tone('square', HZ[n], t, d*b*0.55, 0.07); t += d*b; });
+    return mel.reduce((s,[,d]) => s+d, 0) * b;
+  }
+
+  const TRACKS = { title: scheduleTitle, battle: scheduleBattle };
+
+  function loop(trackName) {
+    if (_track !== trackName) return;
+    const dur = TRACKS[trackName](ctx.currentTime + 0.05);
+    loopTimer = setTimeout(() => loop(trackName), (dur - 0.15) * 1000);
+  }
+
+  function play(trackName) {
+    if (_track === trackName) return;
+    stop();
+    _track = trackName;
+    getCtx();
+    loop(trackName);
+  }
+
+  function stop() {
+    _track = null;
+    if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
+  }
+
+  function toggleMute() {
+    _muted = !_muted;
+    if (master) master.gain.linearRampToValueAtTime(_muted ? 0 : 0.22, ctx.currentTime + 0.1);
+    return _muted;
+  }
+
+  return { play, stop, toggleMute, get muted() { return _muted; } };
+})();
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 
@@ -2810,6 +2936,7 @@ function buildHeroStatusDOM() {
 // ─── INIT ────────────────────────────────────────────────────────────────────
 
 function initBattle() {
+  Music.play('battle');
   STATE.heroes = deepClone(HERO_TEMPLATES);
   STATE.floor = 1;
   STATE.enemies = [spawnBoss(STATE.floor)];
@@ -2960,6 +3087,11 @@ document.getElementById("skill-tree-close").addEventListener("click", () => {
   document.getElementById("skill-tree-modal").classList.add("hidden");
 });
 
+document.getElementById("btn-mute").addEventListener("click", () => {
+  const muted = Music.toggleMute();
+  document.getElementById("btn-mute").textContent = muted ? "🔇" : "🔊";
+});
+
 document.getElementById("btn-give-up").addEventListener("click", () => {
   if (STATE.phase === "battle_over") return;
   if (STATE.testMode) {
@@ -2975,6 +3107,7 @@ document.getElementById("btn-give-up").addEventListener("click", () => {
         .forEach(id => document.getElementById(id)?.classList.add("hidden"));
       document.getElementById("combo-ref-panel").classList.remove("open");
       document.getElementById("title-screen").classList.remove("hidden");
+      Music.play('title');
       STATE.phase = "battle_over";
     }
   }
@@ -3376,6 +3509,7 @@ function buildBossSelectScreen() {
 }
 
 function startTestBattle(floor, isLuna, lunaFloors = 50) {
+  Music.play('battle');
   document.getElementById("boss-select").classList.add("hidden");
 
   // Reset hero and state
@@ -3438,6 +3572,7 @@ function startTestBattle(floor, isLuna, lunaFloors = 50) {
 function leaveTitleScreen() {
   STATE.easierMode = document.getElementById("chk-easier-mode").checked;
   document.getElementById("title-screen").classList.add("hidden");
+  Music.play('title');
   startCutscene();
 }
 
