@@ -1697,6 +1697,7 @@ function spawnLuna() {
 const Music = (() => {
   let ctx = null, master = null;
   let loopTimer = null, _muted = false, _track = null;
+  let _nodes = [];
 
   const HZ = {
     E2:82.41,  F2:87.31,  G2:98.00,  A2:110.00, B2:123.47,
@@ -1725,6 +1726,8 @@ const Music = (() => {
     g.gain.linearRampToValueAtTime(0.001, t0 + dur * 0.85);
     o.connect(g); g.connect(master);
     o.start(t0); o.stop(t0 + dur);
+    _nodes.push(o);
+    o.onended = () => { _nodes = _nodes.filter(n => n !== o); };
   }
 
   // Title theme — Am arpeggios, 72 BPM, ~13s loop
@@ -1793,6 +1796,9 @@ const Music = (() => {
   function stop() {
     _track = null;
     if (loopTimer) { clearTimeout(loopTimer); loopTimer = null; }
+    const now = ctx ? ctx.currentTime : 0;
+    _nodes.forEach(o => { try { o.stop(now); } catch(e) {} });
+    _nodes = [];
   }
 
   function toggleMute() {
